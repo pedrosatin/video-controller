@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Video Controller</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 280px;
+      background: #1a1a2e;
+      color: #ddd8ff;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+    }
+
+    header {
+      padding: 10px 14px 8px;
+      background: #12122a;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    header h1 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #c0b8ff;
+    }
+
+    #video-list {
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .video-card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 9px;
+      background: #252545;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+
+    .video-card:hover {
+      background: #3a3870;
+    }
+
+    .video-card .vc-thumb {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .video-card .vc-info {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .video-card .vc-name {
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #e0dcff;
+    }
+
+    .video-card .vc-meta {
+      font-size: 11px;
+      color: #888;
+      margin-top: 1px;
+    }
+
+    .video-card .vc-open-btn {
+      flex-shrink: 0;
+      padding: 3px 8px;
+      background: #5b4ae8;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+
+    .video-card .vc-open-btn:hover {
+      background: #7263f0;
+    }
+
+    #no-videos {
+      color: #666;
+      text-align: center;
+      padding: 20px 0;
+      font-size: 12px;
+    }
+
+    footer {
+      padding: 8px 12px;
+      background: #12122a;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      font-size: 11px;
+      color: #555;
+      text-align: center;
+    }
+
+    footer a {
+      color: #7263f0;
+      text-decoration: none;
+    }
+
+    footer a:hover { text-decoration: underline; }
+
+    .spinner {
+      text-align: center;
+      padding: 16px;
+      color: #555;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span style="font-size:20px">🎬</span>
+    <h1>Video Controller</h1>
+  </header>
+
+  <div id="video-list">
+    <div class="spinner">Scanning for videos…</div>
+  </div>
+
+  <footer>
+    Hover over any video to activate • <kbd>Esc</kbd> closes the panel
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
