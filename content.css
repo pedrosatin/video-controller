@@ -1,0 +1,287 @@
+/* ============================================================
+   Video Controller – content.css
+   Styles for the hover indicator and floating controller panel.
+   All selectors are prefixed with #vc- to avoid collisions.
+   ============================================================ */
+
+/* ── Reset for all VC elements ─────────────────────────────── */
+#vc-panel,
+#vc-panel *,
+#vc-indicator {
+  all: revert;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ── Hover indicator ───────────────────────────────────────── */
+#vc-indicator {
+  position: absolute !important;
+  z-index: 2147483646 !important;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  background: rgba(26, 26, 46, 0.9) !important;
+  border: 2px solid rgba(160, 140, 255, 0.6) !important;
+  cursor: pointer !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5) !important;
+  transition: transform 0.15s, background 0.15s !important;
+  user-select: none !important;
+  pointer-events: auto !important;
+}
+
+#vc-indicator:hover {
+  background: rgba(91, 74, 232, 0.95) !important;
+  transform: scale(1.15) !important;
+}
+
+/* ── Panel container ───────────────────────────────────────── */
+#vc-panel {
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  top: 16px !important;
+  right: 16px !important;
+  width: 310px !important;
+  background: #1a1a2e !important;
+  color: #ddd8ff !important;
+  border-radius: 12px !important;
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.07) !important;
+  overflow: hidden !important;
+  font-size: 13px !important;
+  user-select: none !important;
+}
+
+#vc-panel.vc-dragging {
+  opacity: 0.92 !important;
+  cursor: grabbing !important;
+}
+
+/* ── Header ────────────────────────────────────────────────── */
+#vc-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 8px 10px !important;
+  background: #12122a !important;
+  cursor: grab !important;
+  gap: 6px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+#vc-panel.vc-dragging #vc-header {
+  cursor: grabbing !important;
+}
+
+#vc-title {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #c0b8ff !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#vc-header-btns {
+  display: flex !important;
+  gap: 4px !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── Body ──────────────────────────────────────────────────── */
+#vc-body {
+  padding: 8px 10px 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+/* ── Generic row ────────────────────────────────────────────── */
+.vc-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  flex-wrap: nowrap !important;
+}
+
+.vc-row.vc-center {
+  justify-content: center !important;
+}
+
+.vc-row.vc-wrap {
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+}
+
+.vc-label {
+  font-size: 11px !important;
+  color: #888 !important;
+  white-space: nowrap !important;
+  margin-right: 2px !important;
+}
+
+/* ── Buttons ────────────────────────────────────────────────── */
+.vc-btn {
+  padding: 4px 7px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 6px !important;
+  background: #252545 !important;
+  color: #ccc6ff !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  line-height: 1.4 !important;
+  transition: background 0.12s, color 0.12s !important;
+  outline: none !important;
+}
+
+.vc-btn:hover {
+  background: #3a3870 !important;
+  color: #fff !important;
+}
+
+.vc-btn:active {
+  background: #5b4ae8 !important;
+}
+
+/* Primary play/pause button */
+.vc-btn.vc-btn-main {
+  padding: 5px 14px !important;
+  background: #5b4ae8 !important;
+  color: #fff !important;
+  font-size: 14px !important;
+  border-color: transparent !important;
+}
+
+.vc-btn.vc-btn-main:hover {
+  background: #7263f0 !important;
+}
+
+/* Active/toggled state (loop, pip, pin) */
+.vc-btn.vc-btn-active {
+  background: #5b4ae8 !important;
+  color: #fff !important;
+  border-color: #8070ff !important;
+}
+
+/* Icon-only button (close, pin, mute) */
+.vc-icon-btn {
+  padding: 3px 6px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #aaa !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+  border-radius: 5px !important;
+  transition: background 0.1s !important;
+  outline: none !important;
+}
+
+.vc-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+}
+
+/* Speed preset – highlight the active one */
+.vc-preset-btn {
+  padding: 3px 5px !important;
+  font-size: 11px !important;
+}
+
+.vc-preset-btn.vc-preset-active {
+  background: #5b4ae8 !important;
+  color: #fff !important;
+  border-color: #8070ff !important;
+}
+
+/* ── Info row (time + speed badge) ──────────────────────────── */
+#vc-info-row {
+  justify-content: space-between !important;
+}
+
+#vc-time-display {
+  font-size: 12px !important;
+  font-variant-numeric: tabular-nums !important;
+  color: #b0a8ff !important;
+}
+
+#vc-speed-badge {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #9d8fff !important;
+  background: rgba(91, 74, 232, 0.25) !important;
+  border-radius: 4px !important;
+  padding: 1px 5px !important;
+}
+
+/* ── Progress bar ────────────────────────────────────────────── */
+#vc-progress-wrap {
+  width: 100% !important;
+}
+
+#vc-progress {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 100% !important;
+  height: 5px !important;
+  border-radius: 3px !important;
+  background: #2e2e52 !important;
+  outline: none !important;
+  cursor: pointer !important;
+  accent-color: #5b4ae8 !important;
+}
+
+#vc-progress::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  width: 13px !important;
+  height: 13px !important;
+  border-radius: 50% !important;
+  background: #7263f0 !important;
+  cursor: pointer !important;
+}
+
+/* ── Volume slider ───────────────────────────────────────────── */
+#vc-vol-slider {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  flex: 1 !important;
+  height: 4px !important;
+  border-radius: 3px !important;
+  background: #2e2e52 !important;
+  outline: none !important;
+  cursor: pointer !important;
+  accent-color: #5b4ae8 !important;
+}
+
+#vc-vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 50% !important;
+  background: #7263f0 !important;
+  cursor: pointer !important;
+}
+
+#vc-vol-display {
+  font-size: 11px !important;
+  width: 32px !important;
+  text-align: right !important;
+  color: #aaa !important;
+}
+
+/* ── Video selector ──────────────────────────────────────────── */
+#vc-selector-row select {
+  flex: 1 !important;
+  background: #252545 !important;
+  color: #ccc !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 5px !important;
+  padding: 2px 4px !important;
+  font-size: 12px !important;
+  outline: none !important;
+}
