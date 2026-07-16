@@ -448,27 +448,37 @@
   // ══════════════════════════════════════════════════════════════════════════
   // VIDEO SELECTOR
   // ══════════════════════════════════════════════════════════════════════════
+  /* ids of the videos currently listed — skip DOM rebuilds when unchanged */
+  let selectorSnapshot = '';
+
   function refreshVideoSelector() {
     const videos = connectedVideos();
     if (videos.length <= 1) {
       selectorRow.style.display = 'none';
+      selectorSnapshot = '';
       return;
     }
     selectorRow.style.display = 'flex';
-    /* Build <option> elements with DOM APIs to avoid XSS via untrusted
-       video metadata (title, aria-label, currentSrc). */
-    while (videoSel.firstChild) videoSel.removeChild(videoSel.firstChild);
-    videos.forEach((v, i) => {
-      const rawLabel =
-        v.title ||
-        v.getAttribute('aria-label') ||
-        (v.currentSrc || '').split('/').pop().split('?')[0] ||
-        `Video ${i + 1}`;
-      const opt = document.createElement('option');
-      opt.value = i;
-      opt.textContent = rawLabel.slice(0, 40); /* textContent is XSS-safe */
-      videoSel.appendChild(opt);
-    });
+
+    const snapshot = videos.map((v) => videoIds.get(v)).join(',');
+    if (snapshot !== selectorSnapshot) {
+      selectorSnapshot = snapshot;
+      /* Build <option> elements with DOM APIs to avoid XSS via untrusted
+         video metadata (title, aria-label, currentSrc). */
+      while (videoSel.firstChild) videoSel.removeChild(videoSel.firstChild);
+      videos.forEach((v, i) => {
+        const rawLabel =
+          v.title ||
+          v.getAttribute('aria-label') ||
+          (v.currentSrc || '').split('/').pop().split('?')[0] ||
+          `Video ${i + 1}`;
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = rawLabel.slice(0, 40); /* textContent is XSS-safe */
+        videoSel.appendChild(opt);
+      });
+    }
+
     const idx = videos.indexOf(activeVideo);
     videoSel.value = idx >= 0 ? idx : 0;
   }
@@ -813,12 +823,19 @@
   const mutObs = new MutationObserver((mutations) => {
     let removed = false;
     for (const m of mutations) {
+      /* Ignore mutations of our own UI: rebuilding the selector options
+         mutates the panel, which would re-trigger this observer and
+         re-rebuild the selector — an infinite loop that freezes the page. */
+      if (m.target === panel || panel.contains(m.target)) continue;
       for (const node of m.addedNodes) {
         if (node.nodeType !== Node.ELEMENT_NODE) continue;
+        if (node === panel || node === indicator) continue;
         if (node.tagName === 'VIDEO') registerVideo(node);
         node.querySelectorAll('video').forEach(registerVideo);
       }
-      if (m.removedNodes.length) removed = true;
+      for (const node of m.removedNodes) {
+        if (node !== panel && node !== indicator) { removed = true; break; }
+      }
     }
     if (removed) {
       pruneVideos();
