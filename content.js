@@ -546,6 +546,13 @@
       placePanel(Math.max(8, window.innerWidth - panel.offsetWidth - 16), 16);
       panel.dataset.positioned = '1';
     }
+    /* diagnostics for "panel buried under site UI" reports */
+    if (POPOVER_OK && !panel.matches(':popover-open')) {
+      console.warn('[VideoController] top-layer promotion failed; falling back to z-index stacking');
+    }
+    if (window.self !== window.top) {
+      console.info('[VideoController] panel lives inside an iframe and cannot escape its bounds');
+    }
   }
 
   function hidePanel() {
@@ -655,6 +662,15 @@
     }
   });
   document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+
+  /* If the site opens its own popover after ours, it stacks above us in the
+     top layer. ToggleEvents don't bubble but are visible to a capturing
+     listener; re-promote so the panel stays on top. Our own toggles are
+     filtered out to avoid recursion. */
+  document.addEventListener('toggle', (e) => {
+    if (e.target === panel || e.target === indicator) return;
+    if (panel.style.display !== 'none') promoteToTopLayer(panel);
+  }, true);
 
   // ══════════════════════════════════════════════════════════════════════════
   // KEYBOARD SHORTCUTS (active only while the panel is open)
