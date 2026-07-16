@@ -13,6 +13,13 @@
   if (window.__vcLoaded) return;
   window.__vcLoaded = true;
 
+  /* Version marker so stale-script issues are diagnosable from the console.
+     console.info, not .debug — debug is hidden by default in DevTools. */
+  console.info(
+    `[VideoController] content script v${chrome.runtime.getManifest().version} loaded in`,
+    location.href
+  );
+
   // ══════════════════════════════════════════════════════════════════════════
   // NATIVE PROPERTY ACCESSORS
   //
@@ -66,8 +73,17 @@
   let hoveredVideo         = null;
   let dragState            = null;
   let indicatorHideTimer   = null;
+  let scrubbing            = false;
+  let userRate             = null; /* speed chosen via the panel; re-asserted if the site resets it */
+  let rateFights           = 0;
+  let rateFightWindowStart = 0;
 
   const knownVideos = new Set();
+  const videoIds    = new WeakMap();
+  let nextVideoId   = 1;
+  /* Random token identifying this frame, so the popup can address one frame
+     among many (the content script runs with all_frames: true). */
+  const FRAME_TOKEN = Math.random().toString(36).slice(2);
 
   // ══════════════════════════════════════════════════════════════════════════
   // HELPERS
@@ -93,14 +109,18 @@
   // ══════════════════════════════════════════════════════════════════════════
   function seek(delta) {
     if (!activeVideo) return;
-    const dur = _get(activeVideo, 'duration') || 0;
+    /* duration is NaN before metadata loads and Infinity for live streams —
+       only use it as an upper bound when it is a real number */
+    const dur = _get(activeVideo, 'duration');
+    const max = isFinite(dur) && dur > 0 ? dur : Infinity;
     const cur = _get(activeVideo, 'currentTime') || 0;
-    _set(activeVideo, 'currentTime', clamp(cur + delta, 0, dur));
+    _set(activeVideo, 'currentTime', clamp(cur + delta, 0, max));
   }
 
   function seekTo(fraction) {
     if (!activeVideo) return;
-    const dur = _get(activeVideo, 'duration') || 0;
+    const dur = _get(activeVideo, 'duration');
+    if (!isFinite(dur) || dur <= 0) return;
     _set(activeVideo, 'currentTime', clamp(fraction * dur, 0, dur));
   }
 
@@ -108,12 +128,35 @@
     if (!activeVideo) return;
     const cur  = _get(activeVideo, 'playbackRate') || 1;
     const next = roundRate(clamp(cur + delta, MIN_RATE, MAX_RATE));
+    userRate = next;
     _set(activeVideo, 'playbackRate', next);
   }
 
   function setSpeed(rate) {
     if (!activeVideo) return;
-    _set(activeVideo, 'playbackRate', clamp(roundRate(rate), MIN_RATE, MAX_RATE));
+    const next = clamp(roundRate(rate), MIN_RATE, MAX_RATE);
+    userRate = next;
+    _set(activeVideo, 'playbackRate', next);
+  }
+
+  /* Some players listen for 'ratechange' and force the rate back. Re-assert
+     the user's choice, but give up if the site keeps fighting within the same
+     second so we never enter an endless set-loop. */
+  function onRateChange() {
+    updateSpeedUI();
+    if (userRate === null || !activeVideo) return;
+    const cur = _get(activeVideo, 'playbackRate');
+    if (cur === userRate) return;
+    const now = Date.now();
+    if (now - rateFightWindowStart > 1000) {
+      rateFightWindowStart = now;
+      rateFights = 0;
+    }
+    if (++rateFights > 5) {
+      userRate = null;
+      return;
+    }
+    _set(activeVideo, 'playbackRate', userRate);
   }
 
   function togglePlay() {
@@ -244,7 +287,9 @@
   `;
 
   panel.style.display = 'none';
-  document.body.appendChild(panel);
+  /* document.body can be null in odd frames (XML documents, srcdoc timing) */
+  const docRoot = () => document.body || document.documentElement;
+  docRoot().appendChild(panel);
 
   /* Hover indicator – a small button that appears over a hovered <video> */
   const indicator = document.createElement('div');
@@ -252,7 +297,7 @@
   indicator.title = 'Open Video Controller';
   indicator.textContent = '🎬';
   indicator.style.display = 'none';
-  document.body.appendChild(indicator);
+  docRoot().appendChild(indicator);
 
   // ══════════════════════════════════════════════════════════════════════════
   // PANEL DOM SHORTCUTS
@@ -286,7 +331,8 @@
     if (!activeVideo) return;
     const cur = _get(activeVideo, 'currentTime') || 0;
     const dur = _get(activeVideo, 'duration')    || 0;
-    if (dur > 0 && isFinite(dur)) {
+    /* don't fight the user's thumb while they are dragging the slider */
+    if (dur > 0 && isFinite(dur) && !scrubbing) {
       progressBar.value = (cur / dur) * 1000;
     }
     timeDisp.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
@@ -354,10 +400,24 @@
   }
 
   // ══════════════════════════════════════════════════════════════════════════
+  // VIDEO REGISTRY
+  // ══════════════════════════════════════════════════════════════════════════
+  function pruneVideos() {
+    for (const v of knownVideos) {
+      if (!v.isConnected) knownVideos.delete(v);
+    }
+  }
+
+  function connectedVideos() {
+    pruneVideos();
+    return [...knownVideos];
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
   // VIDEO SELECTOR
   // ══════════════════════════════════════════════════════════════════════════
   function refreshVideoSelector() {
-    const videos = [...knownVideos].filter((v) => v.isConnected);
+    const videos = connectedVideos();
     if (videos.length <= 1) {
       selectorRow.style.display = 'none';
       return;
@@ -382,8 +442,7 @@
   }
 
   videoSel.addEventListener('change', () => {
-    const videos = [...knownVideos].filter((v) => v.isConnected);
-    const v = videos[parseInt(videoSel.value, 10)];
+    const v = connectedVideos()[parseInt(videoSel.value, 10)];
     if (v) attachVideo(v);
   });
 
@@ -403,6 +462,7 @@
     stopPolling();
 
     activeVideo = video;
+    userRate    = null;
 
     const on = (type, fn) => {
       video.addEventListener(type, fn);
@@ -412,7 +472,7 @@
     on('play',                updatePlayBtn);
     on('pause',               updatePlayBtn);
     on('volumechange',        updateVolumeUI);
-    on('ratechange',          updateSpeedUI);
+    on('ratechange',          onRateChange);
     on('durationchange',      updateProgress);
     on('seeked',              updateProgress);
     on('enterpictureinpicture', updatePipBtn);
@@ -442,6 +502,7 @@
     stopPolling();
     detachListeners();
     activeVideo = null;
+    userRate    = null;
   }
 
   closeBtn.addEventListener('click', hidePanel);
@@ -472,8 +533,11 @@
     if (!dragState) return;
     const dx = e.clientX - dragState.startX;
     const dy = e.clientY - dragState.startY;
-    panel.style.left  = `${dragState.origLeft + dx}px`;
-    panel.style.top   = `${dragState.origTop  + dy}px`;
+    /* keep at least part of the header on-screen so the panel stays reachable */
+    const left = clamp(dragState.origLeft + dx, 60 - panel.offsetWidth, window.innerWidth - 60);
+    const top  = clamp(dragState.origTop  + dy, 0, window.innerHeight - 36);
+    panel.style.left  = `${left}px`;
+    panel.style.top   = `${top}px`;
     panel.style.right = 'auto';
   });
 
@@ -510,6 +574,9 @@
     updateVolumeUI();
   });
 
+  progressBar.addEventListener('pointerdown', () => { scrubbing = true; });
+  document.addEventListener('pointerup',      () => { scrubbing = false; });
+
   progressBar.addEventListener('input', () => {
     seekTo(progressBar.value / 1000);
   });
@@ -518,7 +585,20 @@
   q('#vc-pip-btn').addEventListener('click',        togglePiP);
   loopBtn.addEventListener('click',                 toggleLoop);
 
-  document.addEventListener('fullscreenchange',       updateFullscreenBtn);
+  document.addEventListener('fullscreenchange', () => {
+    updateFullscreenBtn();
+    /* The top layer only renders children of the fullscreen element, so
+       re-parent the panel into it to stay usable in fullscreen. Skip when the
+       video itself is fullscreen — <video> children are not rendered. */
+    const fsEl = document.fullscreenElement;
+    if (fsEl && fsEl !== activeVideo && fsEl.tagName !== 'VIDEO') {
+      fsEl.appendChild(panel);
+      fsEl.appendChild(indicator);
+    } else if (!fsEl) {
+      docRoot().appendChild(panel);
+      docRoot().appendChild(indicator);
+    }
+  });
   document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -527,6 +607,9 @@
   document.addEventListener('keydown', (e) => {
     if (panel.style.display === 'none' || !activeVideo) return;
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+    if (e.target.isContentEditable) return;
+    /* keep native Space/Enter activation on focused panel buttons */
+    if (panel.contains(e.target) && (e.key === ' ' || e.key === 'Enter')) return;
 
     switch (e.key) {
       case ' ':
@@ -584,39 +667,81 @@
 
   // ══════════════════════════════════════════════════════════════════════════
   // HOVER INDICATOR
+  //
+  // Players usually cover the <video> with overlay divs, so mouseover on the
+  // video itself never fires. Instead the pointer is hit-tested against the
+  // rects of all known videos, throttled to one check per animation frame.
+  // The same check re-runs on scroll so the indicator tracks the video.
   // ══════════════════════════════════════════════════════════════════════════
   function positionIndicator(video) {
+    /* viewport coords — the indicator is position: fixed */
     const r = video.getBoundingClientRect();
-    indicator.style.left = `${r.left + window.scrollX + 8}px`;
-    indicator.style.top  = `${r.top  + window.scrollY + 8}px`;
+    indicator.style.left = `${r.left + 8}px`;
+    indicator.style.top  = `${r.top  + 8}px`;
   }
 
-  document.addEventListener('mouseover', (e) => {
-    const video = e.target.closest('video');
-    if (!video) return;
-    hoveredVideo = video;
-    clearTimeout(indicatorHideTimer);
-    positionIndicator(video);
-    indicator.style.display = 'flex';
-  }, true);
+  function pointInRect(x, y, r) {
+    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  }
 
-  document.addEventListener('mouseout', (e) => {
-    const leavingVideo = e.target.closest('video');
-    if (!leavingVideo) return;
-    indicatorHideTimer = setTimeout(() => {
-      if (!indicator.matches(':hover')) {
+  function videoAtPoint(x, y) {
+    let match = null;
+    for (const v of knownVideos) {
+      if (!v.isConnected) continue;
+      const r = v.getBoundingClientRect();
+      if (r.width < 48 || r.height < 48) continue; /* skip tracking pixels / thumbnails */
+      if (pointInRect(x, y, r)) match = v;
+    }
+    return match;
+  }
+
+  function updateIndicator(x, y) {
+    const overPanel =
+      panel.style.display !== 'none' && pointInRect(x, y, panel.getBoundingClientRect());
+    const overInd =
+      indicator.style.display !== 'none' && pointInRect(x, y, indicator.getBoundingClientRect());
+    const video = overPanel ? null : videoAtPoint(x, y);
+
+    if (video || overInd) {
+      if (video) {
+        hoveredVideo = video;
+        positionIndicator(video);
+      }
+      clearTimeout(indicatorHideTimer);
+      indicatorHideTimer = null;
+      indicator.style.display = 'flex';
+    } else if (indicator.style.display !== 'none' && !indicatorHideTimer) {
+      indicatorHideTimer = setTimeout(() => {
+        indicatorHideTimer = null;
         indicator.style.display = 'none';
         hoveredVideo = null;
-      }
-    }, 350);
+      }, 350);
+    }
+  }
+
+  let lastMouseX = -1;
+  let lastMouseY = -1;
+  let indUpdatePending = false;
+
+  function scheduleIndicatorUpdate() {
+    if (indUpdatePending || lastMouseX < 0) return;
+    indUpdatePending = true;
+    requestAnimationFrame(() => {
+      indUpdatePending = false;
+      updateIndicator(lastMouseX, lastMouseY);
+    });
+  }
+
+  document.addEventListener('mousemove', (e) => {
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    scheduleIndicatorUpdate();
   }, true);
 
-  indicator.addEventListener('mouseenter', () => clearTimeout(indicatorHideTimer));
-  indicator.addEventListener('mouseleave', () => {
-    indicatorHideTimer = setTimeout(() => {
-      indicator.style.display = 'none';
-    }, 350);
-  });
+  /* capture: also fires for scrollable containers, not just the window —
+     keeps the indicator glued to the video while the page scrolls under
+     the pointer, and hides it once the video scrolls away */
+  window.addEventListener('scroll', scheduleIndicatorUpdate, { capture: true, passive: true });
 
   indicator.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -630,9 +755,10 @@
   // VIDEO DETECTION (existing + dynamically inserted)
   // ══════════════════════════════════════════════════════════════════════════
   function registerVideo(video) {
-    if (!knownVideos.has(video)) {
-      knownVideos.add(video);
-    }
+    if (knownVideos.has(video)) return;
+    knownVideos.add(video);
+    videoIds.set(video, nextVideoId++);
+    if (panel.style.display !== 'none') refreshVideoSelector();
   }
 
   function scanVideos() {
@@ -640,12 +766,19 @@
   }
 
   const mutObs = new MutationObserver((mutations) => {
+    let removed = false;
     for (const m of mutations) {
       for (const node of m.addedNodes) {
         if (node.nodeType !== Node.ELEMENT_NODE) continue;
         if (node.tagName === 'VIDEO') registerVideo(node);
         node.querySelectorAll('video').forEach(registerVideo);
       }
+      if (m.removedNodes.length) removed = true;
+    }
+    if (removed) {
+      pruneVideos();
+      if (activeVideo && !activeVideo.isConnected) hidePanel();
+      else if (panel.style.display !== 'none') refreshVideoSelector();
     }
   });
 
@@ -653,29 +786,38 @@
   scanVideos();
 
   // ══════════════════════════════════════════════════════════════════════════
-  // EXTENSION MESSAGE HANDLER  (for popup.js)
+  // POPUP CONNECTION (for popup.js)
+  //
+  // The popup opens a Port to every frame in the tab (tabs.connect without a
+  // frameId). Each frame reports its videos over the port as soon as the
+  // popup connects; OPEN_VIDEO is broadcast to all frames and filtered by
+  // FRAME_TOKEN so exactly one frame acts on it.
   // ══════════════════════════════════════════════════════════════════════════
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg.type === 'GET_VIDEOS') {
-      const videos = [...knownVideos]
-        .filter((v) => v.isConnected)
-        .map((v, i) => ({
-          index:    i,
-          src:      (v.currentSrc || '').split('/').pop().split('?')[0].slice(0, 60),
-          title:    (v.title || v.getAttribute('aria-label') || '').slice(0, 60),
-          duration: _get(v, 'duration') || 0,
-          paused:   _get(v, 'paused'),
-        }));
-      sendResponse({ videos });
-      return true;
-    }
+  function videoSummaries() {
+    return connectedVideos().map((v) => ({
+      id:         videoIds.get(v),
+      frameToken: FRAME_TOKEN,
+      src:        (v.currentSrc || '').split('/').pop().split('?')[0].slice(0, 60),
+      title:      (v.title || v.getAttribute('aria-label') || '').slice(0, 60),
+      duration:   _get(v, 'duration') || 0,
+      paused:     _get(v, 'paused'),
+    }));
+  }
 
-    if (msg.type === 'OPEN_VIDEO') {
-      const videos = [...knownVideos].filter((v) => v.isConnected);
-      const v = videos[msg.index];
+  chrome.runtime.onConnect.addListener((port) => {
+    if (port.name !== 'vc-popup') return;
+
+    const videos = videoSummaries();
+    console.info(
+      `[VideoController] popup connected; reporting ${videos.length} video(s) from`,
+      location.href
+    );
+    if (videos.length) port.postMessage({ type: 'VIDEOS', videos });
+
+    port.onMessage.addListener((msg) => {
+      if (msg.type !== 'OPEN_VIDEO' || msg.frameToken !== FRAME_TOKEN) return;
+      const v = connectedVideos().find((x) => videoIds.get(x) === msg.id);
       if (v) attachVideo(v);
-      sendResponse({ ok: !!v });
-      return true;
-    }
+    });
   });
 })();
