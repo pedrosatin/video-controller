@@ -15,8 +15,13 @@
 
 /* ── Hover indicator ───────────────────────────────────────── */
 #vc-indicator {
-  position: absolute !important;
+  /* fixed: positioned in viewport coords by content.js on every mousemove,
+     stays correct inside scrolled pages and fullscreen elements */
+  position: fixed !important;
   z-index: 2147483646 !important;
+  inset: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
   display: none;
   align-items: center;
   justify-content: center;
@@ -43,8 +48,12 @@
 #vc-panel {
   position: fixed !important;
   z-index: 2147483647 !important;
-  top: 16px !important;
-  right: 16px !important;
+  /* position is set inline by content.js (drag needs to win the cascade);
+     neutralize UA popover styles (inset: 0; margin: auto centers the panel) */
+  inset: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
   width: 310px !important;
   background: #1a1a2e !important;
   color: #ddd8ff !important;

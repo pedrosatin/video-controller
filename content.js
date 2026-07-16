@@ -299,6 +299,38 @@
   indicator.style.display = 'none';
   docRoot().appendChild(indicator);
 
+  /* Top-layer promotion: the Popover API paints above every z-index and even
+     above open <dialog>s and fullscreen elements, so the panel is never
+     buried by site UI. Falls back to plain max z-index where unsupported. */
+  const POPOVER_OK = typeof panel.showPopover === 'function';
+  if (POPOVER_OK) {
+    panel.popover     = 'manual'; /* manual: no light-dismiss; Esc is handled by us */
+    indicator.popover = 'manual';
+  }
+
+  function promoteToTopLayer(el) {
+    if (!POPOVER_OK) return;
+    try { el.hidePopover(); } catch (_e) { /* not open */ }
+    try { el.showPopover(); } catch (_e) { /* disconnected */ }
+  }
+
+  function dropFromTopLayer(el) {
+    if (!POPOVER_OK) return;
+    try { el.hidePopover(); } catch (_e) { /* not open */ }
+  }
+
+  function showIndicatorEl() {
+    indicator.style.display = 'flex';
+    if (POPOVER_OK && !indicator.matches(':popover-open')) {
+      try { indicator.showPopover(); } catch (_e) { /* disconnected */ }
+    }
+  }
+
+  function hideIndicatorEl() {
+    indicator.style.display = 'none';
+    dropFromTopLayer(indicator);
+  }
+
   // ══════════════════════════════════════════════════════════════════════════
   // PANEL DOM SHORTCUTS
   // ══════════════════════════════════════════════════════════════════════════
@@ -487,18 +519,28 @@
   // ══════════════════════════════════════════════════════════════════════════
   // PANEL VISIBILITY & DRAG
   // ══════════════════════════════════════════════════════════════════════════
+  /* Inline styles must win the cascade against both our stylesheet and any
+     page rule targeting #vc-panel, hence setProperty with 'important'. */
+  function placePanel(left, top) {
+    panel.style.setProperty('left', `${left}px`, 'important');
+    panel.style.setProperty('top',  `${top}px`,  'important');
+  }
+
   function showPanel() {
+    /* re-append last so the panel wins z-index ties against late site nodes */
+    docRoot().appendChild(panel);
     panel.style.display = 'block';
+    promoteToTopLayer(panel);
     if (!panel.dataset.positioned) {
       /* Default position: top-right, safe from most site navbars */
-      panel.style.top   = '16px';
-      panel.style.right = '16px';
+      placePanel(Math.max(8, window.innerWidth - panel.offsetWidth - 16), 16);
       panel.dataset.positioned = '1';
     }
   }
 
   function hidePanel() {
     panel.style.display = 'none';
+    dropFromTopLayer(panel);
     stopPolling();
     detachListeners();
     activeVideo = null;
@@ -536,9 +578,7 @@
     /* keep at least part of the header on-screen so the panel stays reachable */
     const left = clamp(dragState.origLeft + dx, 60 - panel.offsetWidth, window.innerWidth - 60);
     const top  = clamp(dragState.origTop  + dy, 0, window.innerHeight - 36);
-    panel.style.left  = `${left}px`;
-    panel.style.top   = `${top}px`;
-    panel.style.right = 'auto';
+    placePanel(left, top);
   });
 
   document.addEventListener('mouseup', () => {
@@ -587,8 +627,13 @@
 
   document.addEventListener('fullscreenchange', () => {
     updateFullscreenBtn();
-    /* The top layer only renders children of the fullscreen element, so
-       re-parent the panel into it to stay usable in fullscreen. Skip when the
+    if (POPOVER_OK) {
+      /* the fullscreen element joins the top layer above us — re-promote */
+      if (panel.style.display !== 'none') promoteToTopLayer(panel);
+      return;
+    }
+    /* Fallback without Popover API: the top layer only renders children of
+       the fullscreen element, so re-parent the panel into it. Skip when the
        video itself is fullscreen — <video> children are not rendered. */
     const fsEl = document.fullscreenElement;
     if (fsEl && fsEl !== activeVideo && fsEl.tagName !== 'VIDEO') {
@@ -676,8 +721,8 @@
   function positionIndicator(video) {
     /* viewport coords — the indicator is position: fixed */
     const r = video.getBoundingClientRect();
-    indicator.style.left = `${r.left + 8}px`;
-    indicator.style.top  = `${r.top  + 8}px`;
+    indicator.style.setProperty('left', `${r.left + 8}px`, 'important');
+    indicator.style.setProperty('top',  `${r.top  + 8}px`, 'important');
   }
 
   function pointInRect(x, y, r) {
@@ -709,11 +754,11 @@
       }
       clearTimeout(indicatorHideTimer);
       indicatorHideTimer = null;
-      indicator.style.display = 'flex';
+      showIndicatorEl();
     } else if (indicator.style.display !== 'none' && !indicatorHideTimer) {
       indicatorHideTimer = setTimeout(() => {
         indicatorHideTimer = null;
-        indicator.style.display = 'none';
+        hideIndicatorEl();
         hoveredVideo = null;
       }, 350);
     }
@@ -747,7 +792,7 @@
     e.stopPropagation();
     if (hoveredVideo) {
       attachVideo(hoveredVideo);
-      indicator.style.display = 'none';
+      hideIndicatorEl();
     }
   });
 
