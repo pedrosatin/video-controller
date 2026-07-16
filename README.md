@@ -132,13 +132,7 @@ video-controller/
 
 ## Releasing (maintainers)
 
-CI (`.github/workflows/build.yml`) builds the minified zip on every push to `main` (as a workflow artifact) and attaches it to a public GitHub Release on version tags:
-
-```bash
-# bump "version" in manifest.json first, then:
-git tag v1.0.3
-git push origin v1.0.3
-```
+Fully automatic: every push to `main` builds the minified zip and publishes it to a GitHub Release tagged `v<version>` from `manifest.json` (tag created by CI). Pushing again without bumping the version updates the same release's zip; bumping the version creates a new release.
 
 ## Troubleshooting
 
