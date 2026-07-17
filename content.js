@@ -451,6 +451,18 @@
   /* ids of the videos currently listed — skip DOM rebuilds when unchanged */
   let selectorSnapshot = '';
 
+  function createVideoOption(v, i) {
+    const rawLabel =
+      v.title ||
+      v.getAttribute('aria-label') ||
+      (v.currentSrc || '').split('/').pop().split('?')[0] ||
+      `Video ${i + 1}`;
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = rawLabel.slice(0, 40); /* textContent is XSS-safe */
+    return opt;
+  }
+
   function refreshVideoSelector() {
     const videos = connectedVideos();
     if (videos.length <= 1) {
@@ -467,15 +479,7 @@
          video metadata (title, aria-label, currentSrc). */
       while (videoSel.firstChild) videoSel.removeChild(videoSel.firstChild);
       videos.forEach((v, i) => {
-        const rawLabel =
-          v.title ||
-          v.getAttribute('aria-label') ||
-          (v.currentSrc || '').split('/').pop().split('?')[0] ||
-          `Video ${i + 1}`;
-        const opt = document.createElement('option');
-        opt.value = i;
-        opt.textContent = rawLabel.slice(0, 40); /* textContent is XSS-safe */
-        videoSel.appendChild(opt);
+        videoSel.appendChild(createVideoOption(v, i));
       });
     }
 
