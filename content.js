@@ -906,6 +906,6 @@
   });
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { _get, _set };
+    module.exports = { _get, _set, formatTime, clamp, roundRate };
   }
 })();
