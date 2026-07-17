@@ -83,7 +83,7 @@
   let nextVideoId   = 1;
   /* Random token identifying this frame, so the popup can address one frame
      among many (the content script runs with all_frames: true). */
-  const FRAME_TOKEN = Math.random().toString(36).slice(2);
+  const FRAME_TOKEN = Array.from(crypto.getRandomValues(new Uint32Array(4))).map(v => v.toString(36)).join('');
 
   // ══════════════════════════════════════════════════════════════════════════
   // HELPERS
