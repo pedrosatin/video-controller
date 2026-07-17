@@ -78,8 +78,19 @@
   let rateFightWindowStart = 0;
 
   const knownVideos = new Set();
+  const visibleVideos = new Set();
   const videoIds    = new WeakMap();
   let nextVideoId   = 1;
+
+  const visibilityObserver = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        visibleVideos.add(entry.target);
+      } else {
+        visibleVideos.delete(entry.target);
+      }
+    }
+  });
   /* Random token identifying this frame, so the popup can address one frame
      among many (the content script runs with all_frames: true). */
   const FRAME_TOKEN = Array.from(crypto.getRandomValues(new Uint32Array(4))).map(v => v.toString(36)).join('');
@@ -423,7 +434,11 @@
   // ══════════════════════════════════════════════════════════════════════════
   function pruneVideos() {
     for (const v of knownVideos) {
-      if (!v.isConnected) knownVideos.delete(v);
+      if (!v.isConnected) {
+        knownVideos.delete(v);
+        visibleVideos.delete(v);
+        visibilityObserver.unobserve(v);
+      }
     }
   }
 
@@ -752,7 +767,7 @@
 
   function videoAtPoint(x, y) {
     let match = null;
-    for (const v of knownVideos) {
+    for (const v of visibleVideos) {
       if (!v.isConnected) continue;
       const r = v.getBoundingClientRect();
       if (r.width < 48 || r.height < 48) continue; /* skip tracking pixels / thumbnails */
@@ -823,6 +838,7 @@
   function registerVideo(video) {
     if (knownVideos.has(video)) return;
     knownVideos.add(video);
+    visibilityObserver.observe(video);
     videoIds.set(video, nextVideoId++);
     if (panel.style.display !== 'none') refreshVideoSelector();
   }
