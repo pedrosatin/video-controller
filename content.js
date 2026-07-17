@@ -680,9 +680,11 @@
   // ══════════════════════════════════════════════════════════════════════════
   // KEYBOARD SHORTCUTS (active only while the panel is open)
   // ══════════════════════════════════════════════════════════════════════════
+  const IGNORED_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
+
   document.addEventListener('keydown', (e) => {
     if (panel.style.display === 'none' || !activeVideo) return;
-    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+    if (IGNORED_TAGS.has(e.target.tagName)) return;
     if (e.target.isContentEditable) return;
     /* keep native Space/Enter activation on focused panel buttons */
     if (panel.contains(e.target) && (e.key === ' ' || e.key === 'Enter')) return;
