@@ -16,8 +16,7 @@
   /* Version marker so stale-script issues are diagnosable from the console.
      console.info, not .debug — debug is hidden by default in DevTools. */
   console.info(
-    `[VideoController] content script v${chrome.runtime.getManifest().version} loaded in`,
-    location.href
+    `[VideoController] content script v${chrome.runtime.getManifest().version} loaded`
   );
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -94,23 +93,11 @@
   });
   /* Random token identifying this frame, so the popup can address one frame
      among many (the content script runs with all_frames: true). */
-  const FRAME_TOKEN = Math.random().toString(36).slice(2);
+  const FRAME_TOKEN = Array.from(crypto.getRandomValues(new Uint32Array(4))).map(v => v.toString(36)).join('');
 
   // ══════════════════════════════════════════════════════════════════════════
   // HELPERS
   // ══════════════════════════════════════════════════════════════════════════
-  function formatTime(s) {
-    if (!isFinite(s) || isNaN(s)) return '–:––';
-    s = Math.max(0, Math.floor(s));
-    const h   = Math.floor(s / 3600);
-    const m   = Math.floor((s % 3600) / 60);
-    const sec = s % 60;
-    if (h > 0) {
-      return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-    }
-    return `${m}:${String(sec).padStart(2, '0')}`;
-  }
-
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
   function roundRate(r) { return Math.round(r * 100) / 100; }
@@ -378,7 +365,7 @@
     if (dur > 0 && isFinite(dur) && !scrubbing) {
       progressBar.value = (cur / dur) * 1000;
     }
-    timeDisp.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
+    timeDisp.textContent = `${window.formatDuration(cur, '–:––')} / ${window.formatDuration(dur, '–:––')}`;
   }
 
   function updateSpeedUI() {
@@ -466,6 +453,18 @@
   /* ids of the videos currently listed — skip DOM rebuilds when unchanged */
   let selectorSnapshot = '';
 
+  function createVideoOption(v, i) {
+    const rawLabel =
+      v.title ||
+      v.getAttribute('aria-label') ||
+      (v.currentSrc || '').split('/').pop().split('?')[0] ||
+      `Video ${i + 1}`;
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = rawLabel.slice(0, 40); /* textContent is XSS-safe */
+    return opt;
+  }
+
   function refreshVideoSelector() {
     const videos = connectedVideos();
     if (videos.length <= 1) {
@@ -481,17 +480,11 @@
       /* Build <option> elements with DOM APIs to avoid XSS via untrusted
          video metadata (title, aria-label, currentSrc). */
       while (videoSel.firstChild) videoSel.removeChild(videoSel.firstChild);
+      const fragment = document.createDocumentFragment();
       videos.forEach((v, i) => {
-        const rawLabel =
-          v.title ||
-          v.getAttribute('aria-label') ||
-          (v.currentSrc || '').split('/').pop().split('?')[0] ||
-          `Video ${i + 1}`;
-        const opt = document.createElement('option');
-        opt.value = i;
-        opt.textContent = rawLabel.slice(0, 40); /* textContent is XSS-safe */
-        videoSel.appendChild(opt);
+        fragment.appendChild(createVideoOption(v, i));
       });
+      videoSel.appendChild(fragment);
     }
 
     const idx = videos.indexOf(activeVideo);
@@ -690,9 +683,11 @@
   // ══════════════════════════════════════════════════════════════════════════
   // KEYBOARD SHORTCUTS (active only while the panel is open)
   // ══════════════════════════════════════════════════════════════════════════
+  const IGNORED_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
+
   document.addEventListener('keydown', (e) => {
     if (panel.style.display === 'none' || !activeVideo) return;
-    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+    if (IGNORED_TAGS.has(e.target.tagName)) return;
     if (e.target.isContentEditable) return;
     /* keep native Space/Enter activation on focused panel buttons */
     if (panel.contains(e.target) && (e.key === ' ' || e.key === 'Enter')) return;
@@ -903,8 +898,7 @@
 
     const videos = videoSummaries();
     console.info(
-      `[VideoController] popup connected; reporting ${videos.length} video(s) from`,
-      location.href
+      `[VideoController] popup connected; reporting ${videos.length} video(s)`
     );
     if (videos.length) port.postMessage({ type: 'VIDEOS', videos });
 
@@ -914,4 +908,8 @@
       if (v) attachVideo(v);
     });
   });
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { _get, _set, clamp, roundRate };
+  }
 })();
