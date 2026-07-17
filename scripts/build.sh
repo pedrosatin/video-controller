@@ -6,10 +6,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 rm -rf dist
-mkdir -p dist/icons
+mkdir -p dist/icons dist/scripts
 
-npx --yes esbuild panelTemplate.js content.js popup.js --minify --outdir=dist
-npx --yes esbuild content.css --minify --outfile=dist/content.css
+npx --yes esbuild@0.28.1 panelTemplate.js content.js popup.js --minify --outdir=dist
+npx --yes esbuild@0.28.1 scripts/utils.js --minify --outfile=dist/scripts/utils.js
+npx --yes esbuild@0.28.1 content.css --minify --outfile=dist/content.css
 
 cp manifest.json popup.html dist/
 cp icons/*.png dist/icons/

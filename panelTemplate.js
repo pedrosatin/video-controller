@@ -68,11 +68,10 @@ const VC_PANEL_TEMPLATE = `
     </div>
 `;
 
-// Export for module systems (esbuild handles this properly)
+// Expose to content.js (and to tests under module systems)
+if (typeof window !== 'undefined') {
+  window.VC_PANEL_TEMPLATE = VC_PANEL_TEMPLATE;
+}
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { VC_PANEL_TEMPLATE };
-} else if (typeof exports !== 'undefined') {
-  exports.VC_PANEL_TEMPLATE = VC_PANEL_TEMPLATE;
-} else if (typeof window !== 'undefined') {
-  window.VC_PANEL_TEMPLATE = VC_PANEL_TEMPLATE;
 }
