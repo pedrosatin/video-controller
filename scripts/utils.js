@@ -14,4 +14,8 @@
   }
 
   window.formatDuration = formatDuration;
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { formatDuration };
+  }
 })();
