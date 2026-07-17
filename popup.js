@@ -46,6 +46,8 @@
       return;
     }
 
+    const fragment = document.createDocumentFragment();
+
     videos.forEach((v, i) => {
       const name  = v.title || v.src || `Video ${i + 1}`;
       const dur   = formatDuration(v.duration);
@@ -87,8 +89,10 @@
       card.appendChild(thumb);
       card.appendChild(info);
       card.appendChild(btn);
-      list.appendChild(card);
+      fragment.appendChild(card);
     });
+
+    list.appendChild(fragment);
   }
 
   function openVideo(v) {
