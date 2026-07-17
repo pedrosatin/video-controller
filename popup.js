@@ -90,9 +90,13 @@
       return;
     }
 
+    const fragment = document.createDocumentFragment();
+
     videos.forEach((v, i) => {
-      list.appendChild(createVideoCard(v, i));
+      fragment.appendChild(createVideoCard(v, i));
     });
+
+    list.appendChild(fragment);
   }
 
   function openVideo(v) {
