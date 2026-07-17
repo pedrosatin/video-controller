@@ -1,4 +1,29 @@
-const { formatDuration } = require('../popup.js');
+/**
+ * @jest-environment jsdom
+ */
+
+// Mock chrome API and required DOM elements before requiring popup.js
+global.chrome = {
+  runtime: {
+    getManifest: () => ({ version: '1.0.0' }),
+    lastError: null
+  },
+  tabs: {
+    query: (queryInfo, callback) => callback([{ id: 1 }]),
+    connect: () => ({
+      onMessage: { addListener: () => {} },
+      onDisconnect: { addListener: () => {} },
+      postMessage: () => {}
+    })
+  }
+};
+
+document.body.innerHTML = `
+  <div id="video-list"></div>
+  <div id="version"></div>
+`;
+
+const { formatDuration } = require('./popup.js');
 
 describe('formatDuration', () => {
   it('should return empty string for falsy values', () => {

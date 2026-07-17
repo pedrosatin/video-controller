@@ -1,7 +1,7 @@
 {
-  "name": "app",
+  "name": "video-controller",
   "version": "1.0.0",
-  "description": "> Take control of **any `<video>` element** on any page — including players that deliberately hide speed controls, block seeking, or reset your playback rate.",
+  "description": "Take control of any <video> element on any page — including players that deliberately hide speed controls, block seeking, or reset your playback rate.",
   "main": "content.js",
   "directories": {
     "doc": "docs"
@@ -23,6 +23,7 @@
   "homepage": "https://github.com/pedrosatin/video-controller#readme",
   "devDependencies": {
     "jest": "^30.4.2",
-    "jest-environment-jsdom": "^30.4.1"
+    "jest-environment-jsdom": "^30.4.1",
+    "jsdom": "^29.1.1"
   }
 }
