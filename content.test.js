@@ -15,7 +15,52 @@ global.chrome = {
   }
 };
 
-const { _get, _set, formatTime, roundRate } = require('./content');
+const { _get, _set, formatTime, roundRate, clamp } = require('./content');
+
+describe('clamp', () => {
+  it('returns the value when it is within bounds', () => {
+    expect(clamp(5, 0, 10)).toBe(5);
+  });
+
+  it('returns the lower bound when value is below min', () => {
+    expect(clamp(-5, 0, 10)).toBe(0);
+  });
+
+  it('returns the upper bound when value is above max', () => {
+    expect(clamp(15, 0, 10)).toBe(10);
+  });
+
+  it('handles boundary values correctly', () => {
+    expect(clamp(0, 0, 10)).toBe(0);
+    expect(clamp(10, 0, 10)).toBe(10);
+  });
+
+  it('handles negative boundaries', () => {
+    expect(clamp(-15, -20, -10)).toBe(-15);
+    expect(clamp(-25, -20, -10)).toBe(-20);
+    expect(clamp(-5, -20, -10)).toBe(-10);
+  });
+
+  it('handles float/decimal boundaries', () => {
+    expect(clamp(5.5, 0.5, 10.5)).toBe(5.5);
+    expect(clamp(0.1, 0.5, 10.5)).toBe(0.5);
+    expect(clamp(15.5, 0.5, 10.5)).toBe(10.5);
+  });
+
+  it('handles edge case when min equals max', () => {
+    expect(clamp(5, 10, 10)).toBe(10);
+    expect(clamp(15, 10, 10)).toBe(10);
+  });
+
+  it('handles Infinity', () => {
+    expect(clamp(Infinity, 0, 10)).toBe(10);
+    expect(clamp(-Infinity, 0, 10)).toBe(0);
+  });
+
+  it('handles NaN value', () => {
+    expect(clamp(NaN, 0, 10)).toBeNaN();
+  });
+});
 
 describe('roundRate', () => {
   it('rounds strictly to 2 decimal places', () => {
