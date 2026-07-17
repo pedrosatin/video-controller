@@ -697,57 +697,34 @@
     /* keep native Space/Enter activation on focused panel buttons */
     if (panel.contains(e.target) && (e.key === ' ' || e.key === 'Enter')) return;
 
-    switch (e.key) {
-      case ' ':
-      case 'k':
-        e.preventDefault();
-        togglePlay();
-        break;
-      case 'ArrowLeft':
-        e.preventDefault();
-        seek(e.shiftKey ? -SEEK_LARGE : -SEEK_SMALL);
-        break;
-      case 'ArrowRight':
-        e.preventDefault();
-        seek(e.shiftKey ? +SEEK_LARGE : +SEEK_SMALL);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
+    const keyHandlers = {
+      ' ': () => togglePlay(),
+      'k': () => togglePlay(),
+      'ArrowLeft': () => seek(e.shiftKey ? -SEEK_LARGE : -SEEK_SMALL),
+      'ArrowRight': () => seek(e.shiftKey ? +SEEK_LARGE : +SEEK_SMALL),
+      'ArrowUp': () => {
         setVolume((_get(activeVideo, 'volume') || 0) + 0.1);
         updateVolumeUI();
-        break;
-      case 'ArrowDown':
-        e.preventDefault();
+      },
+      'ArrowDown': () => {
         setVolume((_get(activeVideo, 'volume') || 0) - 0.1);
         updateVolumeUI();
-        break;
-      case '>':
+      },
+      '>': () => changeSpeed(+SPEED_FINE),
+      '<': () => changeSpeed(-SPEED_FINE),
+      'm': () => toggleMute(),
+      'f': () => toggleFullscreen(),
+      'p': () => togglePiP(),
+      'l': () => toggleLoop(),
+      'Escape': () => hidePanel()
+    };
+
+    const handler = keyHandlers[e.key];
+    if (handler) {
+      if (e.key !== 'Escape') {
         e.preventDefault();
-        changeSpeed(+SPEED_FINE);
-        break;
-      case '<':
-        e.preventDefault();
-        changeSpeed(-SPEED_FINE);
-        break;
-      case 'm':
-        e.preventDefault();
-        toggleMute();
-        break;
-      case 'f':
-        e.preventDefault();
-        toggleFullscreen();
-        break;
-      case 'p':
-        e.preventDefault();
-        togglePiP();
-        break;
-      case 'l':
-        e.preventDefault();
-        toggleLoop();
-        break;
-      case 'Escape':
-        hidePanel();
-        break;
+      }
+      handler();
     }
   }, true);
 
