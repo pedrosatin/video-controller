@@ -19,16 +19,6 @@
   document.getElementById('version').textContent =
     `v${chrome.runtime.getManifest().version}`;
 
-  function formatDuration(s) {
-    if (!s || !isFinite(s)) return '';
-    s = Math.floor(s);
-    const h   = Math.floor(s / 3600);
-    const m   = Math.floor((s % 3600) / 60);
-    const sec = s % 60;
-    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-    return `${m}:${String(sec).padStart(2,'0')}`;
-  }
-
   function showMessage(text) {
     while (list.firstChild) list.removeChild(list.firstChild);
     const p = document.createElement('p');
@@ -48,7 +38,7 @@
 
     videos.forEach((v, i) => {
       const name  = v.title || v.src || `Video ${i + 1}`;
-      const dur   = formatDuration(v.duration);
+      const dur   = window.formatDuration(v.duration, '');
       const state = v.paused ? '⏸' : '▶';
 
       /* Build card with DOM APIs to avoid XSS from untrusted video metadata */
