@@ -1,13 +1,13 @@
 {
-  "name": "app",
+  "name": "video-controller",
   "version": "1.0.0",
-  "description": "> Take control of **any `<video>` element** on any page — including players that deliberately hide speed controls, block seeking, or reset your playback rate.",
+  "description": "Take control of any <video> element on any page — including players that deliberately hide speed controls, block seeking, or reset your playback rate.",
   "main": "content.js",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "repository": {
     "type": "git",
