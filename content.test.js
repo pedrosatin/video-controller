@@ -15,7 +15,32 @@ global.chrome = {
   }
 };
 
-const { _get, _set, formatTime } = require('./content');
+const { _get, _set, formatTime, roundRate } = require('./content');
+
+describe('roundRate', () => {
+  it('rounds strictly to 2 decimal places', () => {
+    expect(roundRate(1.234)).toBe(1.23);
+    expect(roundRate(1.235)).toBe(1.24);
+    expect(roundRate(1.239)).toBe(1.24);
+  });
+
+  it('preserves exact 2 decimal places', () => {
+    expect(roundRate(1.23)).toBe(1.23);
+    expect(roundRate(2)).toBe(2);
+    expect(roundRate(0)).toBe(0);
+  });
+
+  it('handles negative values correctly', () => {
+    expect(roundRate(-1.234)).toBe(-1.23);
+    expect(roundRate(-1.236)).toBe(-1.24);
+  });
+
+  it('handles edge cases', () => {
+    expect(Number.isNaN(roundRate(NaN))).toBe(true);
+    expect(roundRate(Infinity)).toBe(Infinity);
+    expect(roundRate(-Infinity)).toBe(-Infinity);
+  });
+});
 
 describe('formatTime', () => {
   describe('standard minute/second formatting', () => {
