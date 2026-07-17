@@ -19,14 +19,10 @@
   document.getElementById('version').textContent =
     `v${chrome.runtime.getManifest().version}`;
 
+  /* Delegates to the shared util (scripts/utils.js, loaded by popup.html);
+     keeps the old falsy semantics: 0/NaN/Infinity -> '' ("Duration unknown") */
   function formatDuration(s) {
-    if (!s || !isFinite(s)) return '';
-    s = Math.floor(s);
-    const h   = Math.floor(s / 3600);
-    const m   = Math.floor((s % 3600) / 60);
-    const sec = s % 60;
-    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-    return `${m}:${String(sec).padStart(2,'0')}`;
+    return s ? window.formatDuration(s, '') : '';
   }
 
   function showMessage(text) {

@@ -87,18 +87,6 @@
   // ══════════════════════════════════════════════════════════════════════════
   // HELPERS
   // ══════════════════════════════════════════════════════════════════════════
-  function formatTime(s) {
-    if (!isFinite(s) || isNaN(s)) return '–:––';
-    s = Math.max(0, Math.floor(s));
-    const h   = Math.floor(s / 3600);
-    const m   = Math.floor((s % 3600) / 60);
-    const sec = s % 60;
-    if (h > 0) {
-      return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-    }
-    return `${m}:${String(sec).padStart(2, '0')}`;
-  }
-
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
   function roundRate(r) { return Math.round(r * 100) / 100; }
@@ -366,7 +354,7 @@
     if (dur > 0 && isFinite(dur) && !scrubbing) {
       progressBar.value = (cur / dur) * 1000;
     }
-    timeDisp.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
+    timeDisp.textContent = `${window.formatDuration(cur, '–:––')} / ${window.formatDuration(dur, '–:––')}`;
   }
 
   function updateSpeedUI() {
@@ -906,6 +894,6 @@
   });
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { _get, _set, formatTime, clamp, roundRate };
+    module.exports = { _get, _set, clamp, roundRate };
   }
 })();

@@ -23,6 +23,7 @@ document.body.innerHTML = `
   <div id="version"></div>
 `;
 
+require('./scripts/utils.js');
 const { formatDuration } = require('./popup.js');
 
 describe('formatDuration', () => {
