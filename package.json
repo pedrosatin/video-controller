@@ -1,0 +1,8 @@
+{
+  "name": "video-controller-tests",
+  "version": "1.0.0",
+  "description": "Tests for video controller",
+  "scripts": {
+    "test": "node --test test/roundRate.test.js"
+  }
+}
