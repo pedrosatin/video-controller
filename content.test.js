@@ -15,7 +15,67 @@ global.chrome = {
   }
 };
 
-const { _get, _set } = require('./content');
+const { _get, _set, formatTime } = require('./content');
+
+describe('formatTime', () => {
+  describe('standard minute/second formatting', () => {
+    it('formats 0 seconds as 0:00', () => {
+      expect(formatTime(0)).toBe('0:00');
+    });
+    it('formats values under 10 seconds with a leading zero for seconds', () => {
+      expect(formatTime(9)).toBe('0:09');
+    });
+    it('formats exactly 1 minute', () => {
+      expect(formatTime(60)).toBe('1:00');
+    });
+    it('formats standard minute/second combinations', () => {
+      expect(formatTime(65)).toBe('1:05');
+      expect(formatTime(3599)).toBe('59:59');
+    });
+  });
+
+  describe('hours formatting', () => {
+    it('formats exactly 1 hour', () => {
+      expect(formatTime(3600)).toBe('1:00:00');
+    });
+    it('formats values over an hour with padding for minutes and seconds', () => {
+      expect(formatTime(3661)).toBe('1:01:01');
+      expect(formatTime(7200)).toBe('2:00:00');
+      expect(formatTime(36000)).toBe('10:00:00');
+    });
+  });
+
+  describe('edge cases and invalid inputs', () => {
+    it('handles NaN gracefully', () => {
+      expect(formatTime(NaN)).toBe('–:––');
+    });
+    it('handles Infinity gracefully', () => {
+      expect(formatTime(Infinity)).toBe('–:––');
+      expect(formatTime(-Infinity)).toBe('–:––');
+    });
+    it('handles undefined and missing arguments', () => {
+      expect(formatTime(undefined)).toBe('–:––');
+      expect(formatTime()).toBe('–:––');
+    });
+    it('handles null (treats as 0)', () => {
+      expect(formatTime(null)).toBe('0:00');
+    });
+    it('clamps negative values to 0', () => {
+      expect(formatTime(-5)).toBe('0:00');
+      expect(formatTime(-3600)).toBe('0:00');
+    });
+    it('floors fractional seconds', () => {
+      expect(formatTime(5.9)).toBe('0:05');
+      expect(formatTime(60.1)).toBe('1:00');
+    });
+    it('handles string inputs that can be parsed as numbers', () => {
+      expect(formatTime('65')).toBe('1:05');
+    });
+    it('handles string inputs that cannot be parsed as numbers', () => {
+      expect(formatTime('abc')).toBe('–:––');
+    });
+  });
+});
 
 describe('_get helper error path', () => {
   it('should fall back to direct property access when the prototype getter throws', () => {
