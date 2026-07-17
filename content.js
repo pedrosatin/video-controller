@@ -904,4 +904,8 @@
       if (v) attachVideo(v);
     });
   });
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { _get, _set };
+  }
 })();
