@@ -16,8 +16,7 @@
   /* Version marker so stale-script issues are diagnosable from the console.
      console.info, not .debug — debug is hidden by default in DevTools. */
   console.info(
-    `[VideoController] content script v${chrome.runtime.getManifest().version} loaded in`,
-    location.href
+    `[VideoController] content script v${chrome.runtime.getManifest().version} loaded`
   );
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -887,8 +886,7 @@
 
     const videos = videoSummaries();
     console.info(
-      `[VideoController] popup connected; reporting ${videos.length} video(s) from`,
-      location.href
+      `[VideoController] popup connected; reporting ${videos.length} video(s)`
     );
     if (videos.length) port.postMessage({ type: 'VIDEOS', videos });
 
