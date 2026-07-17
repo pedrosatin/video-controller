@@ -15,7 +15,11 @@ global.chrome = {
   }
 };
 
-const { _get, _set, formatTime, roundRate, clamp } = require('./content');
+const { _get, _set, roundRate, clamp } = require('./content');
+require('./scripts/utils.js');
+
+/* content.js renders times via window.formatDuration(s, '–:––') */
+const formatTime = (s) => window.formatDuration(s, '–:––');
 
 describe('clamp', () => {
   it('returns the value when it is within bounds', () => {
@@ -127,8 +131,8 @@ describe('formatTime', () => {
       expect(formatTime(undefined)).toBe('–:––');
       expect(formatTime()).toBe('–:––');
     });
-    it('handles null (treats as 0)', () => {
-      expect(formatTime(null)).toBe('0:00');
+    it('handles null as unknown', () => {
+      expect(formatTime(null)).toBe('–:––');
     });
     it('clamps negative values to 0', () => {
       expect(formatTime(-5)).toBe('0:00');
