@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 rm -rf dist
 mkdir -p dist/icons dist/scripts
 
-npx --yes esbuild@0.28.1 content.js popup.js --minify --outdir=dist
+npx --yes esbuild@0.28.1 panelTemplate.js content.js popup.js --minify --outdir=dist
 npx --yes esbuild@0.28.1 scripts/utils.js --minify --outfile=dist/scripts/utils.js
 npx --yes esbuild@0.28.1 content.css --minify --outfile=dist/content.css
 

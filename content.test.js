@@ -15,8 +15,9 @@ global.chrome = {
   }
 };
 
-const { _get, _set, roundRate, clamp } = require('./content');
 require('./scripts/utils.js');
+require('./panelTemplate.js');
+const { _get, _set, roundRate, clamp } = require('./content');
 
 /* content.js renders times via window.formatDuration(s, '–:––') */
 const formatTime = (s) => window.formatDuration(s, '–:––');
