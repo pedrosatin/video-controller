@@ -37,6 +37,50 @@
     list.appendChild(p);
   }
 
+  function createVideoCard(v, i) {
+    const name  = v.title || v.src || `Video ${i + 1}`;
+    const dur   = formatDuration(v.duration);
+    const state = v.paused ? '⏸' : '▶';
+
+    /* Build card with DOM APIs to avoid XSS from untrusted video metadata */
+    const card = document.createElement('div');
+    card.className = 'video-card';
+
+    const thumb = document.createElement('span');
+    thumb.className = 'vc-thumb';
+    thumb.textContent = state;
+
+    const info = document.createElement('div');
+    info.className = 'vc-info';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'vc-name';
+    nameEl.title = name;
+    nameEl.textContent = name; /* textContent is XSS-safe */
+
+    const metaEl = document.createElement('div');
+    metaEl.className = 'vc-meta';
+    metaEl.textContent = dur ? `Duration: ${dur}` : 'Duration unknown';
+
+    const btn = document.createElement('button');
+    btn.className = 'vc-open-btn';
+    btn.textContent = 'Control';
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openVideo(v);
+    });
+
+    /* Also allow clicking the card */
+    card.addEventListener('click', () => openVideo(v));
+
+    info.appendChild(nameEl);
+    info.appendChild(metaEl);
+    card.appendChild(thumb);
+    card.appendChild(info);
+    card.appendChild(btn);
+    return card;
+  }
+
   function renderVideos() {
     const videos = [...found.values()];
     while (list.firstChild) list.removeChild(list.firstChild);
@@ -46,49 +90,13 @@
       return;
     }
 
+    const fragment = document.createDocumentFragment();
+
     videos.forEach((v, i) => {
-      const name  = v.title || v.src || `Video ${i + 1}`;
-      const dur   = formatDuration(v.duration);
-      const state = v.paused ? '⏸' : '▶';
-
-      /* Build card with DOM APIs to avoid XSS from untrusted video metadata */
-      const card = document.createElement('div');
-      card.className = 'video-card';
-
-      const thumb = document.createElement('span');
-      thumb.className = 'vc-thumb';
-      thumb.textContent = state;
-
-      const info = document.createElement('div');
-      info.className = 'vc-info';
-
-      const nameEl = document.createElement('div');
-      nameEl.className = 'vc-name';
-      nameEl.title = name;
-      nameEl.textContent = name; /* textContent is XSS-safe */
-
-      const metaEl = document.createElement('div');
-      metaEl.className = 'vc-meta';
-      metaEl.textContent = dur ? `Duration: ${dur}` : 'Duration unknown';
-
-      const btn = document.createElement('button');
-      btn.className = 'vc-open-btn';
-      btn.textContent = 'Control';
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openVideo(v);
-      });
-
-      /* Also allow clicking the card */
-      card.addEventListener('click', () => openVideo(v));
-
-      info.appendChild(nameEl);
-      info.appendChild(metaEl);
-      card.appendChild(thumb);
-      card.appendChild(info);
-      card.appendChild(btn);
-      list.appendChild(card);
+      fragment.appendChild(createVideoCard(v, i));
     });
+
+    list.appendChild(fragment);
   }
 
   function openVideo(v) {
@@ -127,4 +135,9 @@
       if (found.size === 0 && list.querySelector('.spinner')) renderVideos();
     }, 400);
   });
+
+  /* Export for testing */
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { formatDuration };
+  }
 })();
