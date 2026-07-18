@@ -1,4 +1,12 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["dist/", "graphify-out/", "node_modules/", "coverage/"]
+  "singleQuote": true,
+  "semi": false,
+  "ignorePatterns": [
+    "dist/",
+    "graphify-out/",
+    "node_modules/",
+    "coverage/"
+  ],
+  "printWidth": 100
 }
