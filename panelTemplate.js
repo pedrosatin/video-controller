@@ -69,9 +69,9 @@ const VC_PANEL_TEMPLATE = `
 `;
 
 // Expose to content.js (and to tests under module systems)
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.VC_PANEL_TEMPLATE = VC_PANEL_TEMPLATE;
 }
-if (typeof module !== 'undefined' && module.exports) {
+if (typeof module !== "undefined" && module.exports) {
   module.exports = { VC_PANEL_TEMPLATE };
 }
