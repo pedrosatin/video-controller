@@ -66,12 +66,12 @@ const VC_PANEL_TEMPLATE = `
       </div>
 
     </div>
-`;
+`
 
 // Expose to content.js (and to tests under module systems)
 if (typeof window !== 'undefined') {
-  window.VC_PANEL_TEMPLATE = VC_PANEL_TEMPLATE;
+  window.VC_PANEL_TEMPLATE = VC_PANEL_TEMPLATE
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { VC_PANEL_TEMPLATE };
+  module.exports = { VC_PANEL_TEMPLATE }
 }

@@ -7,7 +7,11 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt '**/*.{js,mjs,cjs,css}'",
+    "format:check": "oxfmt --check '**/*.{js,mjs,cjs,css}'"
   },
   "repository": {
     "type": "git",
@@ -24,6 +28,8 @@
   "devDependencies": {
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
-    "jsdom": "^29.1.1"
+    "jsdom": "^29.1.1",
+    "oxfmt": "^0.59.0",
+    "oxlint": "^1.74.0"
   }
 }
