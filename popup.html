@@ -127,12 +127,59 @@
       color: #555;
       font-size: 12px;
     }
+
+    /* Master enable/disable switch */
+    .vc-switch {
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .vc-switch input { position: absolute; opacity: 0; pointer-events: none; }
+
+    .vc-switch .track {
+      position: relative;
+      width: 34px;
+      height: 18px;
+      border-radius: 9px;
+      background: #3a3a5c;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+
+    .vc-switch .track::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #ddd8ff;
+      transition: transform 0.15s;
+    }
+
+    .vc-switch input:checked + .track { background: #5b4ae8; }
+    .vc-switch input:checked + .track::after { transform: translateX(16px); }
+
+    .vc-switch .label { font-size: 11px; color: #888; min-width: 24px; }
+
+    /* Dim the list while the extension is off */
+    body.vc-off #video-list { opacity: 0.4; pointer-events: none; }
   </style>
 </head>
 <body>
   <header>
     <span style="font-size:20px">🎬</span>
     <h1>Video Controller</h1>
+    <label class="vc-switch" title="Enable or disable the extension">
+      <input type="checkbox" id="enabled-toggle" checked>
+      <span class="track"></span>
+      <span class="label" id="enabled-label">On</span>
+    </label>
   </header>
 
   <div id="video-list">
