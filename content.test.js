@@ -65,6 +65,29 @@ describe('clamp', () => {
   it('handles NaN value', () => {
     expect(clamp(NaN, 0, 10)).toBeNaN()
   })
+
+  it('handles invalid bounds (min > max)', () => {
+    // Math.max(10, Math.min(0, 5)) -> Math.max(10, 0) -> 10
+    expect(clamp(5, 10, 0)).toBe(10)
+  })
+
+  it('handles type coercion for string inputs', () => {
+    expect(clamp('5', '0', '10')).toBe(5)
+    expect(clamp('abc', 0, 10)).toBeNaN()
+  })
+
+  it('handles missing inputs', () => {
+    expect(clamp()).toBeNaN()
+  })
+
+  it('handles type coercion for null and booleans', () => {
+    // null coerces to 0
+    expect(clamp(null, -1, 1)).toBe(0)
+    // true coerces to 1
+    expect(clamp(true, 0, 5)).toBe(1)
+    // false coerces to 0
+    expect(clamp(false, 1, 5)).toBe(1)
+  })
 })
 
 describe('roundRate', () => {
