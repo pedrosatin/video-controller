@@ -63,4 +63,28 @@ describe('formatDuration', () => {
     expect(formatDuration(60.1)).toBe('1:00')
     expect(formatDuration(3600.99)).toBe('1:00:00')
   })
+
+  it('should cap negative numbers at 0', () => {
+    expect(formatDuration(-10)).toBe('0:00')
+    expect(formatDuration(-0.5)).toBe('0:00')
+    expect(formatDuration(-3600)).toBe('0:00')
+  })
+
+  it('should parse valid string representations of numbers', () => {
+    expect(formatDuration("100")).toBe('1:40')
+    expect(formatDuration("3600")).toBe('1:00:00')
+    expect(formatDuration("45.9")).toBe('0:45')
+  })
+
+  it('should return empty string for invalid strings', () => {
+    expect(formatDuration("abc")).toBe('')
+    expect(formatDuration("100px")).toBe('')
+    expect(formatDuration(" ")).toBe('0:00')
+  })
+
+  it('should handle unexpected object types', () => {
+    expect(formatDuration([])).toBe('0:00')
+    expect(formatDuration([1, 2])).toBe('')
+    expect(formatDuration({})).toBe('')
+  })
 })
