@@ -65,6 +65,34 @@ describe('clamp', () => {
   it('handles NaN value', () => {
     expect(clamp(NaN, 0, 10)).toBeNaN()
   })
+
+  it('handles cases where min is greater than max', () => {
+    expect(clamp(5, 10, 0)).toBe(10)
+    expect(clamp(-5, 0, -10)).toBe(0)
+  })
+
+  it('handles missing arguments', () => {
+    expect(clamp(5)).toBeNaN()
+    expect(clamp(5, 0)).toBeNaN()
+    expect(clamp()).toBeNaN()
+  })
+
+  it('handles NaN bounds', () => {
+    expect(clamp(5, NaN, 10)).toBeNaN()
+    expect(clamp(5, 0, NaN)).toBeNaN()
+  })
+
+  it('handles implicit type conversion (strings to numbers)', () => {
+    expect(clamp('5', '0', '10')).toBe(5)
+    expect(clamp('-5', '0', '10')).toBe(0)
+    expect(clamp('15', '0', '10')).toBe(10)
+  })
+
+  it('handles implicit type conversion (null and boolean)', () => {
+    expect(clamp(null, 0, 10)).toBe(0)
+    expect(clamp(true, 0, 10)).toBe(1)
+    expect(clamp(false, -1, 10)).toBe(0)
+  })
 })
 
 describe('roundRate', () => {
