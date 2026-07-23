@@ -110,7 +110,7 @@
   }
 
   function roundRate(r) {
-    return Math.round(r * 100) / 100
+    return Math.round((r + (Math.sign(r) || 1) * Number.EPSILON) * 100) / 100
   }
 
   // ══════════════════════════════════════════════════════════════════════════
