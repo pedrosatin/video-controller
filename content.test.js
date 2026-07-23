@@ -65,6 +65,31 @@ describe('clamp', () => {
   it('handles NaN value', () => {
     expect(clamp(NaN, 0, 10)).toBeNaN()
   })
+
+  it('handles inverted bounds (lo > hi)', () => {
+    expect(clamp(5, 10, 0)).toBe(10)
+    expect(clamp(5, 10, 5)).toBe(10)
+    expect(clamp(15, 10, 0)).toBe(10)
+  })
+
+  it('handles string inputs', () => {
+    expect(clamp('5', '0', '10')).toBe(5)
+    expect(clamp('-5', '0', '10')).toBe(0)
+    expect(clamp('15', '0', '10')).toBe(10)
+  })
+
+  it('handles null inputs', () => {
+    expect(clamp(null, 0, 10)).toBe(0)
+    expect(clamp(5, null, 10)).toBe(5)
+    expect(clamp(5, 0, null)).toBe(0)
+  })
+
+  it('handles undefined or missing inputs', () => {
+    expect(clamp(undefined, 0, 10)).toBeNaN()
+    expect(clamp(5, undefined, 10)).toBeNaN()
+    expect(clamp(5, 0, undefined)).toBeNaN()
+    expect(clamp()).toBeNaN()
+  })
 })
 
 describe('roundRate', () => {
