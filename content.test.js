@@ -65,6 +65,37 @@ describe('clamp', () => {
   it('handles NaN value', () => {
     expect(clamp(NaN, 0, 10)).toBeNaN()
   })
+
+  it('handles min > max (invalid bounds)', () => {
+    // When lo > hi, the function always returns lo due to Math.max(lo, Math.min(hi, v))
+    expect(clamp(5, 10, 0)).toBe(10)
+    expect(clamp(15, 10, 0)).toBe(10)
+    expect(clamp(-5, 10, 0)).toBe(10)
+  })
+
+  it('handles NaN bounds', () => {
+    expect(clamp(5, NaN, 10)).toBeNaN()
+    expect(clamp(5, 0, NaN)).toBeNaN()
+    expect(clamp(5, NaN, NaN)).toBeNaN()
+  })
+
+  it('handles missing arguments', () => {
+    expect(clamp(5)).toBeNaN()
+    expect(clamp()).toBeNaN()
+  })
+
+  it('handles null arguments', () => {
+    expect(clamp(null, 0, 10)).toBe(0) // null is coalesced to 0 in Math.min/max
+    expect(clamp(5, null, 10)).toBe(5)
+    expect(clamp(5, 0, null)).toBe(0)
+  })
+
+  it('handles string conversion', () => {
+    expect(clamp("5", "0", "10")).toBe(5)
+    expect(clamp("-5", "0", "10")).toBe(0)
+    expect(clamp("15", "0", "10")).toBe(10)
+    expect(clamp("abc", 0, 10)).toBeNaN()
+  })
 })
 
 describe('roundRate', () => {
