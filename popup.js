@@ -18,6 +18,27 @@
 
   document.getElementById('version').textContent = `v${chrome.runtime.getManifest().version}`
 
+  /* Master enable/disable switch, persisted in chrome.storage.local.
+     Toggling here is broadcast to every content-script frame via onChanged. */
+  const toggle = document.getElementById('enabled-toggle')
+  const toggleLabel = document.getElementById('enabled-label')
+
+  function reflectEnabled(enabled) {
+    toggle.checked = enabled
+    toggleLabel.textContent = enabled ? 'On' : 'Off'
+    document.body.classList.toggle('vc-off', !enabled)
+  }
+
+  chrome.storage.local.get({ vcEnabled: true }, (res) => {
+    reflectEnabled(res.vcEnabled !== false)
+  })
+
+  toggle.addEventListener('change', () => {
+    const enabled = toggle.checked
+    reflectEnabled(enabled)
+    chrome.storage.local.set({ vcEnabled: enabled })
+  })
+
   /* Delegates to the shared util (scripts/utils.js, loaded by popup.html);
      keeps the old falsy semantics: 0/NaN/Infinity -> '' ("Duration unknown") */
   function formatDuration(s) {

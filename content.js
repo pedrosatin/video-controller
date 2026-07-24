@@ -73,6 +73,9 @@
   let dragState = null
   let indicatorHideTimer = null
   let scrubbing = false
+  /* Master on/off switch, persisted in chrome.storage.local (key: vcEnabled).
+     When false the hover indicator and panel stay hidden across every frame. */
+  let vcEnabled = true
   let userRate = null /* speed chosen via the panel; re-asserted if the site resets it */
   let rateFights = 0
   let rateFightWindowStart = 0
@@ -481,6 +484,7 @@
   }
 
   function attachVideo(video) {
+    if (!vcEnabled) return
     detachListeners()
     stopPolling()
 
@@ -543,6 +547,15 @@
     detachListeners()
     activeVideo = null
     userRate = null
+  }
+
+  /* Tear down all visible UI when the extension is switched off. */
+  function disableUI() {
+    clearTimeout(indicatorHideTimer)
+    indicatorHideTimer = null
+    hoveredVideo = null
+    hideIndicatorEl()
+    if (panel.style.display !== 'none') hidePanel()
   }
 
   closeBtn.addEventListener('click', hidePanel)
@@ -741,6 +754,7 @@
   }
 
   function updateIndicator(x, y) {
+    if (!vcEnabled) return
     const overPanel =
       panel.style.display !== 'none' && pointInRect(x, y, panel.getBoundingClientRect())
     const overInd =
@@ -880,6 +894,28 @@
       if (v) attachVideo(v)
     })
   })
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ENABLE / DISABLE SWITCH
+  //
+  // State lives in chrome.storage.local so it is shared across all tabs and
+  // frames and survives reloads. The popup writes it; every frame reacts live
+  // via onChanged, so toggling takes effect without a page refresh.
+  // ══════════════════════════════════════════════════════════════════════════
+  function applyEnabled(enabled) {
+    vcEnabled = enabled !== false
+    if (!vcEnabled) disableUI()
+  }
+
+  if (chrome.storage && chrome.storage.local) {
+    chrome.storage.local.get({ vcEnabled: true }, (res) => {
+      if (chrome.runtime.lastError) return
+      applyEnabled(res.vcEnabled)
+    })
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && changes.vcEnabled) applyEnabled(changes.vcEnabled.newValue)
+    })
+  }
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { _get, _set, clamp, roundRate }
