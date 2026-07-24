@@ -152,6 +152,20 @@ describe('formatTime', () => {
   })
 })
 
+describe('_get helper normal path', () => {
+  it('should retrieve property using prototype getter if available', () => {
+    const video = document.createElement('video')
+    video.playbackRate = 2.5
+    expect(_get(video, 'playbackRate')).toBe(2.5)
+  })
+
+  it('should retrieve property directly if no prototype getter exists', () => {
+    const video = document.createElement('video')
+    video.customProperty = 'customValue'
+    expect(_get(video, 'customProperty')).toBe('customValue')
+  })
+})
+
 describe('_get helper error path', () => {
   it('should fall back to direct property access when the prototype getter throws', () => {
     // Setup a mock video element
