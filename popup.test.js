@@ -16,10 +16,18 @@ global.chrome = {
       postMessage: () => {},
     }),
   },
+  storage: {
+    local: {
+      get: (defaults, callback) => callback(defaults),
+      set: () => {},
+    },
+  },
 }
 
 document.body.innerHTML = `
   <div id="video-list"></div>
+  <input type="checkbox" id="enabled-toggle">
+  <span id="enabled-label"></span>
   <div id="version"></div>
 `
 
