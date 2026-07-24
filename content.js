@@ -742,11 +742,27 @@
     return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
   }
 
+  const videoRects = new WeakMap()
+  let lastRectsTime = 0
+
   function videoAtPoint(x, y) {
     let match = null
+    const now = performance.now()
+    const useCache = now - lastRectsTime < 500
+
+    if (!useCache) {
+      lastRectsTime = now
+    }
+
     for (const v of visibilityObserver ? visibleVideos : knownVideos) {
       if (!v.isConnected) continue
-      const r = v.getBoundingClientRect()
+
+      let r = videoRects.get(v)
+      if (!useCache || !r) {
+        r = v.getBoundingClientRect()
+        videoRects.set(v, r)
+      }
+
       if (r.width < 48 || r.height < 48) continue /* skip tracking pixels / thumbnails */
       if (pointInRect(x, y, r)) match = v
     }
@@ -804,10 +820,25 @@
   /* capture: also fires for scrollable containers, not just the window —
      keeps the indicator glued to the video while the page scrolls under
      the pointer, and hides it once the video scrolls away */
-  window.addEventListener('scroll', scheduleIndicatorUpdate, {
-    capture: true,
-    passive: true,
-  })
+  window.addEventListener(
+    'scroll',
+    () => {
+      lastRectsTime = 0
+      scheduleIndicatorUpdate()
+    },
+    {
+      capture: true,
+      passive: true,
+    },
+  )
+
+  window.addEventListener(
+    'resize',
+    () => {
+      lastRectsTime = 0
+    },
+    { passive: true },
+  )
 
   indicator.addEventListener('click', (e) => {
     e.stopPropagation()
