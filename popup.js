@@ -12,6 +12,9 @@
 ;(function () {
   'use strict'
 
+  const PORT_FLUSH_DELAY_MS = 80
+  const FRAME_REPORT_DELAY_MS = 400
+
   const list = document.getElementById('video-list')
   const found = new Map() /* "frameToken:id" -> video info */
   let port = null
@@ -123,7 +126,7 @@
       id: v.id,
     })
     /* give the port a moment to flush before the popup context dies */
-    setTimeout(() => window.close(), 80)
+    setTimeout(() => window.close(), PORT_FLUSH_DELAY_MS)
   }
 
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -153,7 +156,7 @@
     /* Give frames a moment to report before declaring none found */
     setTimeout(() => {
       if (found.size === 0 && list.querySelector('.spinner')) renderVideos()
-    }, 400)
+    }, FRAME_REPORT_DELAY_MS)
   })
 
   /* Export for testing */
