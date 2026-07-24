@@ -149,6 +149,18 @@ describe('formatTime', () => {
     it('handles string inputs that cannot be parsed as numbers', () => {
       expect(formatTime('abc')).toBe('–:––')
     })
+    it('handles boolean values as numbers', () => {
+      expect(formatTime(true)).toBe('0:01')
+      expect(formatTime(false)).toBe('0:00')
+    })
+    it('handles arrays and objects', () => {
+      expect(formatTime([])).toBe('0:00')
+      expect(formatTime({})).toBe('–:––')
+    })
+    it('handles empty or whitespace strings', () => {
+      expect(formatTime('')).toBe('0:00')
+      expect(formatTime('   ')).toBe('0:00')
+    })
   })
 })
 
