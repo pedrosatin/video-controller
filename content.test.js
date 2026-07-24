@@ -152,6 +152,41 @@ describe('formatTime', () => {
   })
 })
 
+describe('_set helper error path', () => {
+  it('should silently ignore errors when the prototype setter throws', () => {
+    // Setup a mock video element
+    const video = document.createElement('video')
+    const propertyName = 'mockProperty'
+    const testValue = 'testValue'
+
+    // Define a setter on HTMLMediaElement.prototype that will throw
+    const originalDescriptor = Object.getOwnPropertyDescriptor(
+      HTMLMediaElement.prototype,
+      propertyName,
+    )
+
+    Object.defineProperty(HTMLMediaElement.prototype, propertyName, {
+      set: function (val) {
+        throw new Error('Simulated setter error')
+      },
+      configurable: true,
+    })
+
+    try {
+      // Act & Assert
+      // Calling _set should not throw an error
+      expect(() => _set(video, propertyName, testValue)).not.toThrow()
+    } finally {
+      // Cleanup: restore the original property if it existed, or remove it
+      if (originalDescriptor) {
+        Object.defineProperty(HTMLMediaElement.prototype, propertyName, originalDescriptor)
+      } else {
+        delete HTMLMediaElement.prototype[propertyName]
+      }
+    }
+  })
+})
+
 describe('_get helper error path', () => {
   it('should fall back to direct property access when the prototype getter throws', () => {
     // Setup a mock video element
