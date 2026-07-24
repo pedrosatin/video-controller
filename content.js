@@ -718,6 +718,13 @@
   // rects of all known videos, throttled to one check per animation frame.
   // The same check re-runs on scroll so the indicator tracks the video.
   // ══════════════════════════════════════════════════════════════════════════
+  const videoRectCache = new WeakMap()
+  let cacheTime = performance.now()
+
+  function invalidateRectCache() {
+    cacheTime = performance.now()
+  }
+
   function positionIndicator(video) {
     /* viewport coords — the indicator is position: fixed */
     const r = video.getBoundingClientRect()
@@ -731,9 +738,25 @@
 
   function videoAtPoint(x, y) {
     let match = null
+    const now = performance.now()
+
+    if (now - cacheTime > 500) {
+      cacheTime = now
+    }
+
     for (const v of visibilityObserver ? visibleVideos : knownVideos) {
       if (!v.isConnected) continue
-      const r = v.getBoundingClientRect()
+
+      let cached = videoRectCache.get(v)
+      if (!cached || cached.time !== cacheTime) {
+        cached = {
+          rect: v.getBoundingClientRect(),
+          time: cacheTime,
+        }
+        videoRectCache.set(v, cached)
+      }
+
+      const r = cached.rect
       if (r.width < 48 || r.height < 48) continue /* skip tracking pixels / thumbnails */
       if (pointInRect(x, y, r)) match = v
     }
@@ -790,10 +813,19 @@
   /* capture: also fires for scrollable containers, not just the window —
      keeps the indicator glued to the video while the page scrolls under
      the pointer, and hides it once the video scrolls away */
-  window.addEventListener('scroll', scheduleIndicatorUpdate, {
-    capture: true,
-    passive: true,
-  })
+  window.addEventListener(
+    'scroll',
+    () => {
+      invalidateRectCache()
+      scheduleIndicatorUpdate()
+    },
+    {
+      capture: true,
+      passive: true,
+    },
+  )
+
+  window.addEventListener('resize', invalidateRectCache, { capture: true, passive: true })
 
   indicator.addEventListener('click', (e) => {
     e.stopPropagation()
