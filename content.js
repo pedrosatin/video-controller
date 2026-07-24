@@ -226,15 +226,50 @@
   panel.setAttribute('role', 'dialog')
   panel.setAttribute('aria-label', 'Video Controller')
 
-  const speedPresetsHtml = SPEED_PRESETS.map(
-    (s) => `<button class="vc-btn vc-preset-btn" data-speed="${s}" title="${s}×">${s}×</button>`,
-  ).join('')
+  panel.innerHTML = window.VC_PANEL_TEMPLATE
 
-  panel.innerHTML = window.VC_PANEL_TEMPLATE.replaceAll('__SEEK_LARGE__', SEEK_LARGE)
-    .replaceAll('__SEEK_SMALL__', SEEK_SMALL)
-    .replaceAll('__SPEED_COARSE__', SPEED_COARSE)
-    .replaceAll('__SPEED_FINE__', SPEED_FINE)
-    .replace('__SPEED_PRESETS_HTML__', speedPresetsHtml)
+  // Populate dynamic button properties safely
+  const btnBackLarge = panel.querySelector('#vc-back-large')
+  btnBackLarge.title = `Back ${SEEK_LARGE} s`
+  btnBackLarge.textContent = `−${SEEK_LARGE}s`
+
+  const btnBackSmall = panel.querySelector('#vc-back-small')
+  btnBackSmall.title = `Back ${SEEK_SMALL} s`
+  btnBackSmall.textContent = `−${SEEK_SMALL}s`
+
+  const btnFwdSmall = panel.querySelector('#vc-fwd-small')
+  btnFwdSmall.title = `Forward ${SEEK_SMALL} s`
+  btnFwdSmall.textContent = `+${SEEK_SMALL}s`
+
+  const btnFwdLarge = panel.querySelector('#vc-fwd-large')
+  btnFwdLarge.title = `Forward ${SEEK_LARGE} s`
+  btnFwdLarge.textContent = `+${SEEK_LARGE}s`
+
+  const btnSpdMC = panel.querySelector('#vc-spd-m-c')
+  btnSpdMC.title = `−${SPEED_COARSE}×`
+  btnSpdMC.textContent = `−${SPEED_COARSE}`
+
+  const btnSpdMF = panel.querySelector('#vc-spd-m-f')
+  btnSpdMF.title = `−${SPEED_FINE}×`
+  btnSpdMF.textContent = `−${SPEED_FINE}`
+
+  const btnSpdPF = panel.querySelector('#vc-spd-p-f')
+  btnSpdPF.title = `+${SPEED_FINE}×`
+  btnSpdPF.textContent = `+${SPEED_FINE}`
+
+  const btnSpdPC = panel.querySelector('#vc-spd-p-c')
+  btnSpdPC.title = `+${SPEED_COARSE}×`
+  btnSpdPC.textContent = `+${SPEED_COARSE}`
+
+  const presetsRow = panel.querySelector('#vc-presets-row')
+  for (const s of SPEED_PRESETS) {
+    const btn = document.createElement('button')
+    btn.className = 'vc-btn vc-preset-btn'
+    btn.dataset.speed = s
+    btn.title = `${s}×`
+    btn.textContent = `${s}×`
+    presetsRow.appendChild(btn)
+  }
 
   panel.style.display = 'none'
   /* document.body can be null in odd frames (XML documents, srcdoc timing) */
