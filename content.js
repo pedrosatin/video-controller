@@ -173,8 +173,11 @@
 
   function togglePlay() {
     if (!activeVideo) return
-    if (_get(activeVideo, 'paused')) activeVideo.play().catch(() => {})
-    else activeVideo.pause()
+    if (_get(activeVideo, 'paused')) {
+      activeVideo.play().catch((err) => console.warn('[VideoController] play() failed:', err))
+    } else {
+      activeVideo.pause()
+    }
   }
 
   function setVolume(v) {
