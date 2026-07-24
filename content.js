@@ -173,7 +173,8 @@
 
   function togglePlay() {
     if (!activeVideo) return
-    if (_get(activeVideo, 'paused')) activeVideo.play().catch(() => {})
+    if (_get(activeVideo, 'paused'))
+      activeVideo.play().catch((e) => console.warn('[VideoController] play failed:', e))
     else activeVideo.pause()
   }
 
@@ -198,18 +199,28 @@
     if (!document.fullscreenElement) {
       ;(container || activeVideo)
         .requestFullscreen()
-        .catch(() => activeVideo.requestFullscreen().catch(() => {}))
+        .catch(() =>
+          activeVideo
+            .requestFullscreen()
+            .catch((e) => console.warn('[VideoController] requestFullscreen failed:', e)),
+        )
     } else {
-      document.exitFullscreen().catch(() => {})
+      document
+        .exitFullscreen()
+        .catch((e) => console.warn('[VideoController] exitFullscreen failed:', e))
     }
   }
 
   function togglePiP() {
     if (!activeVideo) return
     if (document.pictureInPictureElement) {
-      document.exitPictureInPicture().catch(() => {})
+      document
+        .exitPictureInPicture()
+        .catch((e) => console.warn('[VideoController] exitPictureInPicture failed:', e))
     } else {
-      activeVideo.requestPictureInPicture().catch(() => {})
+      activeVideo
+        .requestPictureInPicture()
+        .catch((e) => console.warn('[VideoController] requestPictureInPicture failed:', e))
     }
   }
 
