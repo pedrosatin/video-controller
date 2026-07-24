@@ -150,6 +150,22 @@ describe('formatTime', () => {
       expect(formatTime('abc')).toBe('–:––')
     })
   })
+
+  describe('type coercion edge cases', () => {
+    it('handles empty string (coerces to 0)', () => {
+      expect(formatTime('')).toBe('0:00')
+    })
+    it('handles booleans (true -> 1, false -> 0)', () => {
+      expect(formatTime(true)).toBe('0:01')
+      expect(formatTime(false)).toBe('0:00')
+    })
+    it('handles empty array (coerces to 0)', () => {
+      expect(formatTime([])).toBe('0:00')
+    })
+    it('handles object (coerces to NaN)', () => {
+      expect(formatTime({})).toBe('–:––')
+    })
+  })
 })
 
 describe('_get helper error path', () => {
