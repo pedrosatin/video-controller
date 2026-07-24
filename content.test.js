@@ -150,6 +150,35 @@ describe('formatTime', () => {
       expect(formatTime('abc')).toBe('–:––')
     })
   })
+
+  describe('additional mathematical and type coercion edge cases', () => {
+    it('handles negative numbers and -0 by clamping to 0 (Math.max)', () => {
+      expect(formatTime(-10)).toBe('0:00')
+      expect(formatTime(-0)).toBe('0:00')
+      expect(formatTime(-0.1)).toBe('0:00')
+    })
+    it('handles exact boundary conditions like 3600 (triggers h > 0)', () => {
+      expect(formatTime(3600)).toBe('1:00:00')
+      expect(formatTime(7200)).toBe('2:00:00')
+    })
+    it('handles fractional and decimal seconds via Math.floor', () => {
+      expect(formatTime(3599.9)).toBe('59:59')
+      expect(formatTime(3600.1)).toBe('1:00:00')
+      expect(formatTime(0.999)).toBe('0:00')
+    })
+    it('handles extremely large numbers (MAX_SAFE_INTEGER)', () => {
+      expect(formatTime(Number.MAX_SAFE_INTEGER)).toBe('2501999792983:36:31')
+    })
+    it('handles type coercions (booleans, empty strings, arrays)', () => {
+      expect(formatTime('')).toBe('0:00')
+      expect(formatTime(true)).toBe('0:01')
+      expect(formatTime(false)).toBe('0:00')
+      expect(formatTime([])).toBe('0:00')
+      expect(formatTime([1])).toBe('0:01')
+    })
+  })
+
+
 })
 
 describe('_get helper error path', () => {
