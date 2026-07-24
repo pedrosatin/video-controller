@@ -152,6 +152,88 @@ describe('formatTime', () => {
   })
 })
 
+describe('_set helper', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+  })
+
+  it('should use prototype setter when available', () => {
+    const propertyName = 'mockProperty'
+    const expectedValue = 'testValue'
+    let setterCalledWith = null
+
+    const originalDescriptor = Object.getOwnPropertyDescriptor(
+      HTMLMediaElement.prototype,
+      propertyName,
+    )
+
+    Object.defineProperty(HTMLMediaElement.prototype, propertyName, {
+      set: function (val) {
+        setterCalledWith = val
+      },
+      configurable: true,
+    })
+
+    try {
+      _set(video, propertyName, expectedValue)
+      expect(setterCalledWith).toBe(expectedValue)
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(HTMLMediaElement.prototype, propertyName, originalDescriptor)
+      } else {
+        delete HTMLMediaElement.prototype[propertyName]
+      }
+    }
+  })
+
+  it('should fall back to direct property assignment when prototype setter is not available', () => {
+    const propertyName = 'mockPropertyDirect'
+    const expectedValue = 'testValueDirect'
+
+    _set(video, propertyName, expectedValue)
+    expect(video[propertyName]).toBe(expectedValue)
+  })
+
+  it('should silently catch and ignore errors thrown by the prototype setter', () => {
+    const propertyName = 'mockPropertyError'
+    const expectedValue = 'testValueError'
+
+    const originalDescriptor = Object.getOwnPropertyDescriptor(
+      HTMLMediaElement.prototype,
+      propertyName,
+    )
+
+    Object.defineProperty(HTMLMediaElement.prototype, propertyName, {
+      set: function () {
+        throw new Error('Simulated setter error')
+      },
+      configurable: true,
+    })
+
+    try {
+      expect(() => _set(video, propertyName, expectedValue)).not.toThrow()
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(HTMLMediaElement.prototype, propertyName, originalDescriptor)
+      } else {
+        delete HTMLMediaElement.prototype[propertyName]
+      }
+    }
+  })
+
+  it('should silently catch and ignore errors during direct assignment', () => {
+    const propertyName = 'mockPropertyDirectError'
+    const expectedValue = 'testValueDirectError'
+
+    // Prevent adding properties to the video element to simulate a direct assignment error
+    Object.preventExtensions(video)
+
+    expect(() => _set(video, propertyName, expectedValue)).not.toThrow()
+  })
+})
+
 describe('_get helper error path', () => {
   it('should fall back to direct property access when the prototype getter throws', () => {
     // Setup a mock video element
