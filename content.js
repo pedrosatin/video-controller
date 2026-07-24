@@ -833,7 +833,7 @@
   }
 
   const mutObs = new MutationObserver((mutations) => {
-    let removed = false
+    let checkRemovals = false
     for (const m of mutations) {
       /* Ignore mutations of our own UI: rebuilding the selector options
          mutates the panel, which would re-trigger this observer and
@@ -845,17 +845,22 @@
         if (node.tagName === 'VIDEO') registerVideo(node)
         node.querySelectorAll('video').forEach(registerVideo)
       }
-      for (const node of m.removedNodes) {
-        if (node !== panel && node !== indicator) {
+      if (m.removedNodes.length > 0) checkRemovals = true
+    }
+
+    if (checkRemovals) {
+      let removed = false
+      for (const v of knownVideos) {
+        if (!v.isConnected) {
           removed = true
           break
         }
       }
-    }
-    if (removed) {
-      pruneVideos()
-      if (activeVideo && !activeVideo.isConnected) hidePanel()
-      else if (panel.style.display !== 'none') refreshVideoSelector()
+      if (removed) {
+        pruneVideos()
+        if (activeVideo && !activeVideo.isConnected) hidePanel()
+        else if (panel.style.display !== 'none') refreshVideoSelector()
+      }
     }
   })
 
