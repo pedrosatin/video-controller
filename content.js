@@ -196,11 +196,15 @@
       activeVideo.closest('[class*="Player"]') ||
       activeVideo.parentElement
     if (!document.fullscreenElement) {
-      ;(container || activeVideo)
-        .requestFullscreen()
-        .catch(() => activeVideo.requestFullscreen().catch(() => {}))
+      ;(container || activeVideo).requestFullscreen().catch((e) =>
+        activeVideo.requestFullscreen().catch((err) => {
+          console.warn('[VideoController] requestFullscreen error:', err || e)
+        }),
+      )
     } else {
-      document.exitFullscreen().catch(() => {})
+      document.exitFullscreen().catch((err) => {
+        console.warn('[VideoController] exitFullscreen error:', err)
+      })
     }
   }
 
