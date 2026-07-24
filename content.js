@@ -843,7 +843,9 @@
         if (node.nodeType !== Node.ELEMENT_NODE) continue
         if (node === panel || node === indicator) continue
         if (node.tagName === 'VIDEO') registerVideo(node)
-        node.querySelectorAll('video').forEach(registerVideo)
+        if (node.firstElementChild) {
+          node.querySelectorAll('video').forEach(registerVideo)
+        }
       }
       for (const node of m.removedNodes) {
         if (node !== panel && node !== indicator) {
