@@ -12,11 +12,35 @@
 ;(function () {
   'use strict'
 
+  const PORT_FLUSH_DELAY_MS = 80
+  const FRAME_REPORT_DELAY_MS = 400
+
   const list = document.getElementById('video-list')
   const found = new Map() /* "frameToken:id" -> video info */
   let port = null
 
   document.getElementById('version').textContent = `v${chrome.runtime.getManifest().version}`
+
+  /* Master enable/disable switch, persisted in chrome.storage.local.
+     Toggling here is broadcast to every content-script frame via onChanged. */
+  const toggle = document.getElementById('enabled-toggle')
+  const toggleLabel = document.getElementById('enabled-label')
+
+  function reflectEnabled(enabled) {
+    toggle.checked = enabled
+    toggleLabel.textContent = enabled ? 'On' : 'Off'
+    document.body.classList.toggle('vc-off', !enabled)
+  }
+
+  chrome.storage.local.get({ vcEnabled: true }, (res) => {
+    reflectEnabled(res.vcEnabled !== false)
+  })
+
+  toggle.addEventListener('change', () => {
+    const enabled = toggle.checked
+    reflectEnabled(enabled)
+    chrome.storage.local.set({ vcEnabled: enabled })
+  })
 
   /* Delegates to the shared util (scripts/utils.js, loaded by popup.html);
      keeps the old falsy semantics: 0/NaN/Infinity -> '' ("Duration unknown") */
@@ -102,7 +126,7 @@
       id: v.id,
     })
     /* give the port a moment to flush before the popup context dies */
-    setTimeout(() => window.close(), 80)
+    setTimeout(() => window.close(), PORT_FLUSH_DELAY_MS)
   }
 
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -132,7 +156,7 @@
     /* Give frames a moment to report before declaring none found */
     setTimeout(() => {
       if (found.size === 0 && list.querySelector('.spinner')) renderVideos()
-    }, 400)
+    }, FRAME_REPORT_DELAY_MS)
   })
 
   /* Export for testing */

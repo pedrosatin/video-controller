@@ -31,6 +31,7 @@ Many course platforms, corporate LMSs and streaming sites **hide the speed contr
 | ⧉ **Picture-in-Picture** | Float the video above everything |
 | ↺ **Loop** | Toggle looping on/off |
 | 🗂 **Multiple videos** | Selector appears automatically; iframe videos listed too |
+| 🔌 **On/off switch** | Toggle in the popup; hides the hover indicator and panel everywhere until you turn it back on |
 | ⌨️ **Keyboard shortcuts** | Full set, active while the panel is open (see below) |
 
 ## Installation
@@ -116,6 +117,7 @@ Two layers:
 - **No data is collected, stored, or transmitted.** Everything runs locally in your browser.
 - No background service worker, no network requests, no analytics.
 - The broad host access (`<all_urls>`) exists only because videos can appear on any site.
+- The `storage` permission holds a single local flag (on/off state) — never synced or transmitted.
 
 ## File structure
 
