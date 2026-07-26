@@ -65,6 +65,31 @@ describe('clamp', () => {
   it('handles NaN value', () => {
     expect(clamp(NaN, 0, 10)).toBeNaN()
   })
+
+  it('handles inverted bounds (lo > hi)', () => {
+    expect(clamp(5, 10, 0)).toBe(10)
+    expect(clamp(5, 10, 5)).toBe(10)
+    expect(clamp(15, 10, 0)).toBe(10)
+  })
+
+  it('handles string inputs', () => {
+    expect(clamp('5', '0', '10')).toBe(5)
+    expect(clamp('-5', '0', '10')).toBe(0)
+    expect(clamp('15', '0', '10')).toBe(10)
+  })
+
+  it('handles null inputs', () => {
+    expect(clamp(null, 0, 10)).toBe(0)
+    expect(clamp(5, null, 10)).toBe(5)
+    expect(clamp(5, 0, null)).toBe(0)
+  })
+
+  it('handles undefined or missing inputs', () => {
+    expect(clamp(undefined, 0, 10)).toBeNaN()
+    expect(clamp(5, undefined, 10)).toBeNaN()
+    expect(clamp(5, 0, undefined)).toBeNaN()
+    expect(clamp()).toBeNaN()
+  })
 })
 
 describe('roundRate', () => {
@@ -153,6 +178,34 @@ describe('formatTime', () => {
     })
     it('handles string inputs that cannot be parsed as numbers', () => {
       expect(formatTime('abc')).toBe('–:––')
+    })
+    it('handles arrays that coerce to numbers or NaN', () => {
+      expect(formatTime([])).toBe('0:00')
+      expect(formatTime([1])).toBe('0:01')
+      expect(formatTime([1, 2])).toBe('–:––')
+    })
+    it('handles booleans', () => {
+      expect(formatTime(true)).toBe('0:01')
+      expect(formatTime(false)).toBe('0:00')
+    })
+    it('handles objects', () => {
+      expect(formatTime({})).toBe('–:––')
+    })
+    it('handles empty and whitespace-only strings', () => {
+      expect(formatTime('')).toBe('0:00')
+      expect(formatTime('  ')).toBe('0:00')
+    })
+    it('handles negative zero', () => {
+      expect(formatTime(-0)).toBe('0:00')
+    })
+    it('handles complex strings that can be parsed as numbers', () => {
+      expect(formatTime('-5')).toBe('0:00')
+      expect(formatTime('  123.45  ')).toBe('2:03')
+    })
+    it('handles MAX_SAFE_INTEGER and MIN_SAFE_INTEGER', () => {
+      // 9007199254740991 seconds
+      expect(formatTime(Number.MAX_SAFE_INTEGER)).toBe('2501999792983:36:31')
+      expect(formatTime(Number.MIN_SAFE_INTEGER)).toBe('0:00')
     })
   })
 })
