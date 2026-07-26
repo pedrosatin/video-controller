@@ -113,7 +113,7 @@
   }
 
   function roundRate(r) {
-    return Math.round(r * 100) / 100
+    return Math.round((r + (Math.sign(r) || 1) * Number.EPSILON) * 100) / 100
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -173,8 +173,11 @@
 
   function togglePlay() {
     if (!activeVideo) return
-    if (_get(activeVideo, 'paused')) activeVideo.play().catch(() => {})
-    else activeVideo.pause()
+    if (_get(activeVideo, 'paused')) {
+      activeVideo.play().catch((err) => console.warn('[VideoController] play failed:', err))
+    } else {
+      activeVideo.pause()
+    }
   }
 
   function setVolume(v) {
@@ -196,20 +199,29 @@
       activeVideo.closest('[class*="Player"]') ||
       activeVideo.parentElement
     if (!document.fullscreenElement) {
-      ;(container || activeVideo)
-        .requestFullscreen()
-        .catch(() => activeVideo.requestFullscreen().catch(() => {}))
+      ;(container || activeVideo).requestFullscreen().catch((err) => {
+        console.warn('[VideoController] container.requestFullscreen failed:', err)
+        activeVideo.requestFullscreen().catch((err2) => {
+          console.warn('[VideoController] activeVideo.requestFullscreen failed:', err2)
+        })
+      })
     } else {
-      document.exitFullscreen().catch(() => {})
+      document
+        .exitFullscreen()
+        .catch((err) => console.warn('[VideoController] exitFullscreen failed:', err))
     }
   }
 
   function togglePiP() {
     if (!activeVideo) return
     if (document.pictureInPictureElement) {
-      document.exitPictureInPicture().catch(() => {})
+      document
+        .exitPictureInPicture()
+        .catch((err) => console.warn('[VideoController] exitPictureInPicture failed:', err))
     } else {
-      activeVideo.requestPictureInPicture().catch(() => {})
+      activeVideo
+        .requestPictureInPicture()
+        .catch((err) => console.warn('[VideoController] requestPictureInPicture failed:', err))
     }
   }
 
@@ -226,15 +238,50 @@
   panel.setAttribute('role', 'dialog')
   panel.setAttribute('aria-label', 'Video Controller')
 
-  const speedPresetsHtml = SPEED_PRESETS.map(
-    (s) => `<button class="vc-btn vc-preset-btn" data-speed="${s}" title="${s}×">${s}×</button>`,
-  ).join('')
+  panel.innerHTML = window.VC_PANEL_TEMPLATE
 
-  panel.innerHTML = window.VC_PANEL_TEMPLATE.replaceAll('__SEEK_LARGE__', SEEK_LARGE)
-    .replaceAll('__SEEK_SMALL__', SEEK_SMALL)
-    .replaceAll('__SPEED_COARSE__', SPEED_COARSE)
-    .replaceAll('__SPEED_FINE__', SPEED_FINE)
-    .replace('__SPEED_PRESETS_HTML__', speedPresetsHtml)
+  // Populate dynamic button properties safely
+  const btnBackLarge = panel.querySelector('#vc-back-large')
+  btnBackLarge.title = `Back ${SEEK_LARGE} s`
+  btnBackLarge.textContent = `−${SEEK_LARGE}s`
+
+  const btnBackSmall = panel.querySelector('#vc-back-small')
+  btnBackSmall.title = `Back ${SEEK_SMALL} s`
+  btnBackSmall.textContent = `−${SEEK_SMALL}s`
+
+  const btnFwdSmall = panel.querySelector('#vc-fwd-small')
+  btnFwdSmall.title = `Forward ${SEEK_SMALL} s`
+  btnFwdSmall.textContent = `+${SEEK_SMALL}s`
+
+  const btnFwdLarge = panel.querySelector('#vc-fwd-large')
+  btnFwdLarge.title = `Forward ${SEEK_LARGE} s`
+  btnFwdLarge.textContent = `+${SEEK_LARGE}s`
+
+  const btnSpdMC = panel.querySelector('#vc-spd-m-c')
+  btnSpdMC.title = `−${SPEED_COARSE}×`
+  btnSpdMC.textContent = `−${SPEED_COARSE}`
+
+  const btnSpdMF = panel.querySelector('#vc-spd-m-f')
+  btnSpdMF.title = `−${SPEED_FINE}×`
+  btnSpdMF.textContent = `−${SPEED_FINE}`
+
+  const btnSpdPF = panel.querySelector('#vc-spd-p-f')
+  btnSpdPF.title = `+${SPEED_FINE}×`
+  btnSpdPF.textContent = `+${SPEED_FINE}`
+
+  const btnSpdPC = panel.querySelector('#vc-spd-p-c')
+  btnSpdPC.title = `+${SPEED_COARSE}×`
+  btnSpdPC.textContent = `+${SPEED_COARSE}`
+
+  const presetsRow = panel.querySelector('#vc-presets-row')
+  for (const s of SPEED_PRESETS) {
+    const btn = document.createElement('button')
+    btn.className = 'vc-btn vc-preset-btn'
+    btn.dataset.speed = s
+    btn.title = `${s}×`
+    btn.textContent = `${s}×`
+    presetsRow.appendChild(btn)
+  }
 
   panel.style.display = 'none'
   /* document.body can be null in odd frames (XML documents, srcdoc timing) */
@@ -441,6 +488,18 @@
     return opt
   }
 
+  function rebuildVideoOptions(videos, snapshot) {
+    selectorSnapshot = snapshot
+    /* Build <option> elements with DOM APIs to avoid XSS via untrusted
+       video metadata (title, aria-label, currentSrc). */
+    while (videoSel.firstChild) videoSel.removeChild(videoSel.firstChild)
+    const fragment = document.createDocumentFragment()
+    videos.forEach((v, i) => {
+      fragment.appendChild(createVideoOption(v, i))
+    })
+    videoSel.appendChild(fragment)
+  }
+
   function refreshVideoSelector() {
     const videos = connectedVideos()
     if (videos.length <= 1) {
@@ -452,15 +511,7 @@
 
     const snapshot = videos.map((v) => videoIds.get(v)).join(',')
     if (snapshot !== selectorSnapshot) {
-      selectorSnapshot = snapshot
-      /* Build <option> elements with DOM APIs to avoid XSS via untrusted
-         video metadata (title, aria-label, currentSrc). */
-      while (videoSel.firstChild) videoSel.removeChild(videoSel.firstChild)
-      const fragment = document.createDocumentFragment()
-      videos.forEach((v, i) => {
-        fragment.appendChild(createVideoOption(v, i))
-      })
-      videoSel.appendChild(fragment)
+      rebuildVideoOptions(videos, snapshot)
     }
 
     const idx = videos.indexOf(activeVideo)
@@ -742,11 +793,27 @@
     return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
   }
 
+  const videoRects = new WeakMap()
+  let lastRectsTime = 0
+
   function videoAtPoint(x, y) {
     let match = null
+    const now = performance.now()
+    const useCache = now - lastRectsTime < 500
+
+    if (!useCache) {
+      lastRectsTime = now
+    }
+
     for (const v of visibilityObserver ? visibleVideos : knownVideos) {
       if (!v.isConnected) continue
-      const r = v.getBoundingClientRect()
+
+      let r = videoRects.get(v)
+      if (!useCache || !r) {
+        r = v.getBoundingClientRect()
+        videoRects.set(v, r)
+      }
+
       if (r.width < 48 || r.height < 48) continue /* skip tracking pixels / thumbnails */
       if (pointInRect(x, y, r)) match = v
     }
@@ -804,10 +871,25 @@
   /* capture: also fires for scrollable containers, not just the window —
      keeps the indicator glued to the video while the page scrolls under
      the pointer, and hides it once the video scrolls away */
-  window.addEventListener('scroll', scheduleIndicatorUpdate, {
-    capture: true,
-    passive: true,
-  })
+  window.addEventListener(
+    'scroll',
+    () => {
+      lastRectsTime = 0
+      scheduleIndicatorUpdate()
+    },
+    {
+      capture: true,
+      passive: true,
+    },
+  )
+
+  window.addEventListener(
+    'resize',
+    () => {
+      lastRectsTime = 0
+    },
+    { passive: true },
+  )
 
   indicator.addEventListener('click', (e) => {
     e.stopPropagation()
@@ -833,7 +915,7 @@
   }
 
   const mutObs = new MutationObserver((mutations) => {
-    let removed = false
+    let checkRemovals = false
     for (const m of mutations) {
       /* Ignore mutations of our own UI: rebuilding the selector options
          mutates the panel, which would re-trigger this observer and
@@ -845,17 +927,22 @@
         if (node.tagName === 'VIDEO') registerVideo(node)
         node.querySelectorAll('video').forEach(registerVideo)
       }
-      for (const node of m.removedNodes) {
-        if (node !== panel && node !== indicator) {
+      if (m.removedNodes.length > 0) checkRemovals = true
+    }
+
+    if (checkRemovals) {
+      let removed = false
+      for (const v of knownVideos) {
+        if (!v.isConnected) {
           removed = true
           break
         }
       }
-    }
-    if (removed) {
-      pruneVideos()
-      if (activeVideo && !activeVideo.isConnected) hidePanel()
-      else if (panel.style.display !== 'none') refreshVideoSelector()
+      if (removed) {
+        pruneVideos()
+        if (activeVideo && !activeVideo.isConnected) hidePanel()
+        else if (panel.style.display !== 'none') refreshVideoSelector()
+      }
     }
   })
 
