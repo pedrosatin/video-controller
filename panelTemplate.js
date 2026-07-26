@@ -28,26 +28,25 @@ const VC_PANEL_TEMPLATE = `
 
       <!-- Playback controls -->
       <div class="vc-row vc-center">
-        <button class="vc-btn" id="vc-back-large" title="Back __SEEK_LARGE__ s">−__SEEK_LARGE__s</button>
-        <button class="vc-btn" id="vc-back-small" title="Back __SEEK_SMALL__ s">−__SEEK_SMALL__s</button>
+        <button class="vc-btn" id="vc-back-large"></button>
+        <button class="vc-btn" id="vc-back-small"></button>
         <button class="vc-btn vc-btn-main" id="vc-play-pause" title="Play / Pause (Space)">▶</button>
-        <button class="vc-btn" id="vc-fwd-small"  title="Forward __SEEK_SMALL__ s">+__SEEK_SMALL__s</button>
-        <button class="vc-btn" id="vc-fwd-large"  title="Forward __SEEK_LARGE__ s">+__SEEK_LARGE__s</button>
+        <button class="vc-btn" id="vc-fwd-small"></button>
+        <button class="vc-btn" id="vc-fwd-large"></button>
       </div>
 
       <!-- Speed fine-tune -->
       <div class="vc-row vc-center">
         <span class="vc-label">Speed</span>
-        <button class="vc-btn" id="vc-spd-m-c" title="−__SPEED_COARSE__×">−0.25</button>
-        <button class="vc-btn" id="vc-spd-m-f" title="−__SPEED_FINE__×">−0.1</button>
+        <button class="vc-btn" id="vc-spd-m-c"></button>
+        <button class="vc-btn" id="vc-spd-m-f"></button>
         <button class="vc-btn" id="vc-spd-rst" title="Reset to 1×">1×</button>
-        <button class="vc-btn" id="vc-spd-p-f" title="+__SPEED_FINE__×">+0.1</button>
-        <button class="vc-btn" id="vc-spd-p-c" title="+__SPEED_COARSE__×">+0.25</button>
+        <button class="vc-btn" id="vc-spd-p-f"></button>
+        <button class="vc-btn" id="vc-spd-p-c"></button>
       </div>
 
       <!-- Speed presets -->
       <div class="vc-row vc-wrap" id="vc-presets-row">
-        __SPEED_PRESETS_HTML__
       </div>
 
       <!-- Volume -->
