@@ -2,3 +2,4 @@ dist/
 video-controller-v*.zip
 node_modules/
 graphify-out/
+coverage/
