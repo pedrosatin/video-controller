@@ -74,6 +74,11 @@ describe('roundRate', () => {
     expect(roundRate(1.239)).toBe(1.24)
   })
 
+  it('handles floating point math imprecision', () => {
+    expect(roundRate(1.005)).toBe(1.01)
+    expect(roundRate(1.055)).toBe(1.06)
+  })
+
   it('preserves exact 2 decimal places', () => {
     expect(roundRate(1.23)).toBe(1.23)
     expect(roundRate(2)).toBe(2)
