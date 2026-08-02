@@ -914,6 +914,30 @@
     document.querySelectorAll('video').forEach(registerVideo)
   }
 
+  function processAddedNodes(addedNodes) {
+    for (const node of addedNodes) {
+      if (node.nodeType !== Node.ELEMENT_NODE) continue
+      if (node === panel || node === indicator) continue
+      if (node.tagName === 'VIDEO') registerVideo(node)
+      node.querySelectorAll('video').forEach(registerVideo)
+    }
+  }
+
+  function handleRemovals() {
+    let removed = false
+    for (const v of knownVideos) {
+      if (!v.isConnected) {
+        removed = true
+        break
+      }
+    }
+    if (removed) {
+      pruneVideos()
+      if (activeVideo && !activeVideo.isConnected) hidePanel()
+      else if (panel.style.display !== 'none') refreshVideoSelector()
+    }
+  }
+
   const mutObs = new MutationObserver((mutations) => {
     let checkRemovals = false
     for (const m of mutations) {
@@ -921,28 +945,12 @@
          mutates the panel, which would re-trigger this observer and
          re-rebuild the selector — an infinite loop that freezes the page. */
       if (m.target === panel || panel.contains(m.target)) continue
-      for (const node of m.addedNodes) {
-        if (node.nodeType !== Node.ELEMENT_NODE) continue
-        if (node === panel || node === indicator) continue
-        if (node.tagName === 'VIDEO') registerVideo(node)
-        node.querySelectorAll('video').forEach(registerVideo)
-      }
+      processAddedNodes(m.addedNodes)
       if (m.removedNodes.length > 0) checkRemovals = true
     }
 
     if (checkRemovals) {
-      let removed = false
-      for (const v of knownVideos) {
-        if (!v.isConnected) {
-          removed = true
-          break
-        }
-      }
-      if (removed) {
-        pruneVideos()
-        if (activeVideo && !activeVideo.isConnected) hidePanel()
-        else if (panel.style.display !== 'none') refreshVideoSelector()
-      }
+      handleRemovals()
     }
   })
 
