@@ -115,10 +115,22 @@ describe('roundRate', () => {
     expect(roundRate(-1.236)).toBe(-1.24)
   })
 
-  it('handles edge cases', () => {
+  it('handles NaN input', () => {
     expect(Number.isNaN(roundRate(NaN))).toBe(true)
+  })
+
+  it('handles Infinity', () => {
     expect(roundRate(Infinity)).toBe(Infinity)
     expect(roundRate(-Infinity)).toBe(-Infinity)
+  })
+
+  it('handles null inputs', () => {
+    expect(roundRate(null)).toBe(0)
+  })
+
+  it('handles undefined or missing inputs', () => {
+    expect(Number.isNaN(roundRate(undefined))).toBe(true)
+    expect(Number.isNaN(roundRate())).toBe(true)
   })
 })
 
