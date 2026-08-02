@@ -924,8 +924,16 @@
       for (const node of m.addedNodes) {
         if (node.nodeType !== Node.ELEMENT_NODE) continue
         if (node === panel || node === indicator) continue
-        if (node.tagName === 'VIDEO') registerVideo(node)
-        node.querySelectorAll('video').forEach(registerVideo)
+        if (node.tagName === 'VIDEO') {
+          registerVideo(node)
+        } else {
+          const videos = node.getElementsByTagName('video')
+          if (videos.length > 0) {
+            for (let i = 0; i < videos.length; i++) {
+              registerVideo(videos[i])
+            }
+          }
+        }
       }
       if (m.removedNodes.length > 0) checkRemovals = true
     }
