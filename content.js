@@ -361,6 +361,7 @@
   const loopBtn = q('#vc-loop-btn')
   const selectorRow = q('#vc-selector-row')
   const videoSel = q('#vc-video-sel')
+  const presetBtns = q('#vc-presets-row').querySelectorAll('.vc-preset-btn')
 
   // ══════════════════════════════════════════════════════════════════════════
   // UI UPDATE FUNCTIONS
@@ -387,11 +388,9 @@
     if (!activeVideo) return
     const r = _get(activeVideo, 'playbackRate') || 1
     speedBadge.textContent = `${r.toFixed(2)}×`
-    q('#vc-presets-row')
-      .querySelectorAll('.vc-preset-btn')
-      .forEach((btn) => {
-        btn.classList.toggle('vc-preset-active', parseFloat(btn.dataset.speed) === r)
-      })
+    presetBtns.forEach((btn) => {
+      btn.classList.toggle('vc-preset-active', parseFloat(btn.dataset.speed) === r)
+    })
   }
 
   function updateVolumeUI() {
@@ -665,11 +664,9 @@
   q('#vc-spd-p-f').addEventListener('click', () => changeSpeed(+SPEED_FINE))
   q('#vc-spd-p-c').addEventListener('click', () => changeSpeed(+SPEED_COARSE))
 
-  q('#vc-presets-row')
-    .querySelectorAll('.vc-preset-btn')
-    .forEach((btn) => {
-      btn.addEventListener('click', () => setSpeed(parseFloat(btn.dataset.speed)))
-    })
+  presetBtns.forEach((btn) => {
+    btn.addEventListener('click', () => setSpeed(parseFloat(btn.dataset.speed)))
+  })
 
   muteBtn.addEventListener('click', toggleMute)
 
