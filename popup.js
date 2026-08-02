@@ -161,6 +161,6 @@
 
   /* Export for testing */
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { formatDuration }
+    module.exports = { formatDuration, reflectEnabled }
   }
 })()
