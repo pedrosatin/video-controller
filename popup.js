@@ -56,34 +56,29 @@
     list.appendChild(p)
   }
 
+  function createElement(tag, className, textContent) {
+    const el = document.createElement(tag)
+    if (className) el.className = className
+    if (textContent !== undefined) el.textContent = textContent
+    return el
+  }
+
   function createVideoCard(v, i) {
     const name = v.title || v.src || `Video ${i + 1}`
     const dur = formatDuration(v.duration)
     const state = v.paused ? '⏸' : '▶'
 
     /* Build card with DOM APIs to avoid XSS from untrusted video metadata */
-    const card = document.createElement('div')
-    card.className = 'video-card'
+    const card = createElement('div', 'video-card')
+    const thumb = createElement('span', 'vc-thumb', state)
+    const info = createElement('div', 'vc-info')
 
-    const thumb = document.createElement('span')
-    thumb.className = 'vc-thumb'
-    thumb.textContent = state
+    const nameEl = createElement('div', 'vc-name', name)
+    nameEl.title = name /* textContent is XSS-safe */
 
-    const info = document.createElement('div')
-    info.className = 'vc-info'
+    const metaEl = createElement('div', 'vc-meta', dur ? `Duration: ${dur}` : 'Duration unknown')
 
-    const nameEl = document.createElement('div')
-    nameEl.className = 'vc-name'
-    nameEl.title = name
-    nameEl.textContent = name /* textContent is XSS-safe */
-
-    const metaEl = document.createElement('div')
-    metaEl.className = 'vc-meta'
-    metaEl.textContent = dur ? `Duration: ${dur}` : 'Duration unknown'
-
-    const btn = document.createElement('button')
-    btn.className = 'vc-open-btn'
-    btn.textContent = 'Control'
+    const btn = createElement('button', 'vc-open-btn', 'Control')
     btn.addEventListener('click', (e) => {
       e.stopPropagation()
       openVideo(v)
@@ -161,6 +156,6 @@
 
   /* Export for testing */
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { formatDuration }
+    module.exports = { formatDuration, reflectEnabled }
   }
 })()
