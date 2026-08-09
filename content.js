@@ -194,10 +194,7 @@
   function toggleFullscreen() {
     if (!activeVideo) return
     /* Try the closest player container first, then the video itself */
-    const container =
-      activeVideo.closest('[class*="player"]') ||
-      activeVideo.closest('[class*="Player"]') ||
-      activeVideo.parentElement
+    const container = activeVideo.closest('[class*="player" i]') || activeVideo.parentElement
     if (!document.fullscreenElement) {
       ;(container || activeVideo).requestFullscreen().catch((err) => {
         console.warn('[VideoController] container.requestFullscreen failed:', err)
@@ -238,7 +235,9 @@
   panel.setAttribute('role', 'dialog')
   panel.setAttribute('aria-label', 'Video Controller')
 
-  panel.innerHTML = window.VC_PANEL_TEMPLATE
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(window.VC_PANEL_TEMPLATE, 'text/html')
+  panel.append(...doc.body.childNodes)
 
   // Populate dynamic button properties safely
   const btnBackLarge = panel.querySelector('#vc-back-large')
@@ -361,6 +360,7 @@
   const loopBtn = q('#vc-loop-btn')
   const selectorRow = q('#vc-selector-row')
   const videoSel = q('#vc-video-sel')
+  const presetBtns = q('#vc-presets-row').querySelectorAll('.vc-preset-btn')
 
   // ══════════════════════════════════════════════════════════════════════════
   // UI UPDATE FUNCTIONS
@@ -387,11 +387,9 @@
     if (!activeVideo) return
     const r = _get(activeVideo, 'playbackRate') || 1
     speedBadge.textContent = `${r.toFixed(2)}×`
-    q('#vc-presets-row')
-      .querySelectorAll('.vc-preset-btn')
-      .forEach((btn) => {
-        btn.classList.toggle('vc-preset-active', parseFloat(btn.dataset.speed) === r)
-      })
+    presetBtns.forEach((btn) => {
+      btn.classList.toggle('vc-preset-active', parseFloat(btn.dataset.speed) === r)
+    })
   }
 
   function updateVolumeUI() {
@@ -665,11 +663,9 @@
   q('#vc-spd-p-f').addEventListener('click', () => changeSpeed(+SPEED_FINE))
   q('#vc-spd-p-c').addEventListener('click', () => changeSpeed(+SPEED_COARSE))
 
-  q('#vc-presets-row')
-    .querySelectorAll('.vc-preset-btn')
-    .forEach((btn) => {
-      btn.addEventListener('click', () => setSpeed(parseFloat(btn.dataset.speed)))
-    })
+  presetBtns.forEach((btn) => {
+    btn.addEventListener('click', () => setSpeed(parseFloat(btn.dataset.speed)))
+  })
 
   muteBtn.addEventListener('click', toggleMute)
 
@@ -732,6 +728,28 @@
   // ══════════════════════════════════════════════════════════════════════════
   const IGNORED_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
 
+  const KEY_HANDLERS = {
+    ' ': () => togglePlay(),
+    k: () => togglePlay(),
+    ArrowLeft: (e) => seek(e.shiftKey ? -SEEK_LARGE : -SEEK_SMALL),
+    ArrowRight: (e) => seek(e.shiftKey ? +SEEK_LARGE : +SEEK_SMALL),
+    ArrowUp: () => {
+      setVolume((_get(activeVideo, 'volume') || 0) + 0.1)
+      updateVolumeUI()
+    },
+    ArrowDown: () => {
+      setVolume((_get(activeVideo, 'volume') || 0) - 0.1)
+      updateVolumeUI()
+    },
+    '>': () => changeSpeed(+SPEED_FINE),
+    '<': () => changeSpeed(-SPEED_FINE),
+    m: () => toggleMute(),
+    f: () => toggleFullscreen(),
+    p: () => togglePiP(),
+    l: () => toggleLoop(),
+    Escape: () => hidePanel(),
+  }
+
   document.addEventListener(
     'keydown',
     (e) => {
@@ -741,34 +759,12 @@
       /* keep native Space/Enter activation on focused panel buttons */
       if (panel.contains(e.target) && (e.key === ' ' || e.key === 'Enter')) return
 
-      const keyHandlers = {
-        ' ': () => togglePlay(),
-        k: () => togglePlay(),
-        ArrowLeft: () => seek(e.shiftKey ? -SEEK_LARGE : -SEEK_SMALL),
-        ArrowRight: () => seek(e.shiftKey ? +SEEK_LARGE : +SEEK_SMALL),
-        ArrowUp: () => {
-          setVolume((_get(activeVideo, 'volume') || 0) + 0.1)
-          updateVolumeUI()
-        },
-        ArrowDown: () => {
-          setVolume((_get(activeVideo, 'volume') || 0) - 0.1)
-          updateVolumeUI()
-        },
-        '>': () => changeSpeed(+SPEED_FINE),
-        '<': () => changeSpeed(-SPEED_FINE),
-        m: () => toggleMute(),
-        f: () => toggleFullscreen(),
-        p: () => togglePiP(),
-        l: () => toggleLoop(),
-        Escape: () => hidePanel(),
-      }
-
-      const handler = keyHandlers[e.key]
+      const handler = KEY_HANDLERS[e.key]
       if (handler) {
         if (e.key !== 'Escape') {
           e.preventDefault()
         }
-        handler()
+        handler(e)
       }
     },
     true,
@@ -914,6 +910,36 @@
     document.querySelectorAll('video').forEach(registerVideo)
   }
 
+  function processAddedNodes(addedNodes) {
+    for (const node of addedNodes) {
+      if (node.nodeType !== Node.ELEMENT_NODE) continue
+      if (node === panel || node === indicator) continue
+      if (node.tagName === 'VIDEO') {
+        registerVideo(node)
+      } else {
+        const videos = node.getElementsByTagName('video')
+        for (let i = 0; i < videos.length; i++) {
+          registerVideo(videos[i])
+        }
+      }
+    }
+  }
+
+  function handleRemovals() {
+    let removed = false
+    for (const v of knownVideos) {
+      if (!v.isConnected) {
+        removed = true
+        break
+      }
+    }
+    if (removed) {
+      pruneVideos()
+      if (activeVideo && !activeVideo.isConnected) hidePanel()
+      else if (panel.style.display !== 'none') refreshVideoSelector()
+    }
+  }
+
   const mutObs = new MutationObserver((mutations) => {
     let checkRemovals = false
     for (const m of mutations) {
@@ -921,36 +947,12 @@
          mutates the panel, which would re-trigger this observer and
          re-rebuild the selector — an infinite loop that freezes the page. */
       if (m.target === panel || panel.contains(m.target)) continue
-      for (const node of m.addedNodes) {
-        if (node.nodeType !== Node.ELEMENT_NODE) continue
-        if (node === panel || node === indicator) continue
-        if (node.tagName === 'VIDEO') {
-          registerVideo(node)
-        } else {
-          const videos = node.getElementsByTagName('video')
-          if (videos.length > 0) {
-            for (let i = 0; i < videos.length; i++) {
-              registerVideo(videos[i])
-            }
-          }
-        }
-      }
+      processAddedNodes(m.addedNodes)
       if (m.removedNodes.length > 0) checkRemovals = true
     }
 
     if (checkRemovals) {
-      let removed = false
-      for (const v of knownVideos) {
-        if (!v.isConnected) {
-          removed = true
-          break
-        }
-      }
-      if (removed) {
-        pruneVideos()
-        if (activeVideo && !activeVideo.isConnected) hidePanel()
-        else if (panel.style.display !== 'none') refreshVideoSelector()
-      }
+      handleRemovals()
     }
   })
 
