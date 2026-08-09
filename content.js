@@ -731,6 +731,28 @@
   // ══════════════════════════════════════════════════════════════════════════
   const IGNORED_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
 
+  const KEY_HANDLERS = {
+    ' ': () => togglePlay(),
+    k: () => togglePlay(),
+    ArrowLeft: (e) => seek(e.shiftKey ? -SEEK_LARGE : -SEEK_SMALL),
+    ArrowRight: (e) => seek(e.shiftKey ? +SEEK_LARGE : +SEEK_SMALL),
+    ArrowUp: () => {
+      setVolume((_get(activeVideo, 'volume') || 0) + 0.1)
+      updateVolumeUI()
+    },
+    ArrowDown: () => {
+      setVolume((_get(activeVideo, 'volume') || 0) - 0.1)
+      updateVolumeUI()
+    },
+    '>': () => changeSpeed(+SPEED_FINE),
+    '<': () => changeSpeed(-SPEED_FINE),
+    m: () => toggleMute(),
+    f: () => toggleFullscreen(),
+    p: () => togglePiP(),
+    l: () => toggleLoop(),
+    Escape: () => hidePanel(),
+  }
+
   document.addEventListener(
     'keydown',
     (e) => {
@@ -740,34 +762,12 @@
       /* keep native Space/Enter activation on focused panel buttons */
       if (panel.contains(e.target) && (e.key === ' ' || e.key === 'Enter')) return
 
-      const keyHandlers = {
-        ' ': () => togglePlay(),
-        k: () => togglePlay(),
-        ArrowLeft: () => seek(e.shiftKey ? -SEEK_LARGE : -SEEK_SMALL),
-        ArrowRight: () => seek(e.shiftKey ? +SEEK_LARGE : +SEEK_SMALL),
-        ArrowUp: () => {
-          setVolume((_get(activeVideo, 'volume') || 0) + 0.1)
-          updateVolumeUI()
-        },
-        ArrowDown: () => {
-          setVolume((_get(activeVideo, 'volume') || 0) - 0.1)
-          updateVolumeUI()
-        },
-        '>': () => changeSpeed(+SPEED_FINE),
-        '<': () => changeSpeed(-SPEED_FINE),
-        m: () => toggleMute(),
-        f: () => toggleFullscreen(),
-        p: () => togglePiP(),
-        l: () => toggleLoop(),
-        Escape: () => hidePanel(),
-      }
-
-      const handler = keyHandlers[e.key]
+      const handler = KEY_HANDLERS[e.key]
       if (handler) {
         if (e.key !== 'Escape') {
           e.preventDefault()
         }
-        handler()
+        handler(e)
       }
     },
     true,
