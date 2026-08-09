@@ -194,10 +194,7 @@
   function toggleFullscreen() {
     if (!activeVideo) return
     /* Try the closest player container first, then the video itself */
-    const container =
-      activeVideo.closest('[class*="player"]') ||
-      activeVideo.closest('[class*="Player"]') ||
-      activeVideo.parentElement
+    const container = activeVideo.closest('[class*="player" i]') || activeVideo.parentElement
     if (!document.fullscreenElement) {
       ;(container || activeVideo).requestFullscreen().catch((err) => {
         console.warn('[VideoController] container.requestFullscreen failed:', err)
@@ -238,7 +235,9 @@
   panel.setAttribute('role', 'dialog')
   panel.setAttribute('aria-label', 'Video Controller')
 
-  panel.innerHTML = window.VC_PANEL_TEMPLATE
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(window.VC_PANEL_TEMPLATE, 'text/html')
+  panel.append(...doc.body.childNodes)
 
   // Populate dynamic button properties safely
   const btnBackLarge = panel.querySelector('#vc-back-large')
@@ -729,6 +728,28 @@
   // ══════════════════════════════════════════════════════════════════════════
   const IGNORED_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
 
+  const KEY_HANDLERS = {
+    ' ': () => togglePlay(),
+    k: () => togglePlay(),
+    ArrowLeft: (e) => seek(e.shiftKey ? -SEEK_LARGE : -SEEK_SMALL),
+    ArrowRight: (e) => seek(e.shiftKey ? +SEEK_LARGE : +SEEK_SMALL),
+    ArrowUp: () => {
+      setVolume((_get(activeVideo, 'volume') || 0) + 0.1)
+      updateVolumeUI()
+    },
+    ArrowDown: () => {
+      setVolume((_get(activeVideo, 'volume') || 0) - 0.1)
+      updateVolumeUI()
+    },
+    '>': () => changeSpeed(+SPEED_FINE),
+    '<': () => changeSpeed(-SPEED_FINE),
+    m: () => toggleMute(),
+    f: () => toggleFullscreen(),
+    p: () => togglePiP(),
+    l: () => toggleLoop(),
+    Escape: () => hidePanel(),
+  }
+
   document.addEventListener(
     'keydown',
     (e) => {
@@ -738,34 +759,12 @@
       /* keep native Space/Enter activation on focused panel buttons */
       if (panel.contains(e.target) && (e.key === ' ' || e.key === 'Enter')) return
 
-      const keyHandlers = {
-        ' ': () => togglePlay(),
-        k: () => togglePlay(),
-        ArrowLeft: () => seek(e.shiftKey ? -SEEK_LARGE : -SEEK_SMALL),
-        ArrowRight: () => seek(e.shiftKey ? +SEEK_LARGE : +SEEK_SMALL),
-        ArrowUp: () => {
-          setVolume((_get(activeVideo, 'volume') || 0) + 0.1)
-          updateVolumeUI()
-        },
-        ArrowDown: () => {
-          setVolume((_get(activeVideo, 'volume') || 0) - 0.1)
-          updateVolumeUI()
-        },
-        '>': () => changeSpeed(+SPEED_FINE),
-        '<': () => changeSpeed(-SPEED_FINE),
-        m: () => toggleMute(),
-        f: () => toggleFullscreen(),
-        p: () => togglePiP(),
-        l: () => toggleLoop(),
-        Escape: () => hidePanel(),
-      }
-
-      const handler = keyHandlers[e.key]
+      const handler = KEY_HANDLERS[e.key]
       if (handler) {
         if (e.key !== 'Escape') {
           e.preventDefault()
         }
-        handler()
+        handler(e)
       }
     },
     true,
