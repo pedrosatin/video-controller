@@ -914,8 +914,14 @@
     for (const node of addedNodes) {
       if (node.nodeType !== Node.ELEMENT_NODE) continue
       if (node === panel || node === indicator) continue
-      if (node.tagName === 'VIDEO') registerVideo(node)
-      node.querySelectorAll('video').forEach(registerVideo)
+      if (node.tagName === 'VIDEO') {
+        registerVideo(node)
+      } else {
+        const videos = node.getElementsByTagName('video')
+        for (let i = 0; i < videos.length; i++) {
+          registerVideo(videos[i])
+        }
+      }
     }
   }
 
