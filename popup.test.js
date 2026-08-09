@@ -32,7 +32,7 @@ document.body.innerHTML = `
 `
 
 require('./scripts/utils.js')
-const { formatDuration } = require('./popup.js')
+const { formatDuration, reflectEnabled } = require('./popup.js')
 
 describe('formatDuration', () => {
   it('should return empty string for falsy values', () => {
@@ -91,5 +91,33 @@ describe('formatDuration', () => {
 
   it('should handle very large numbers correctly', () => {
     expect(formatDuration(1000000)).toBe('277:46:40')
+  })
+})
+
+describe('reflectEnabled', () => {
+  let toggle
+  let toggleLabel
+
+  beforeEach(() => {
+    toggle = document.getElementById('enabled-toggle')
+    toggleLabel = document.getElementById('enabled-label')
+    // Reset body classes
+    document.body.className = ''
+  })
+
+  it('should set toggle and label to On and remove vc-off class when true', () => {
+    reflectEnabled(true)
+
+    expect(toggle.checked).toBe(true)
+    expect(toggleLabel.textContent).toBe('On')
+    expect(document.body.classList.contains('vc-off')).toBe(false)
+  })
+
+  it('should set toggle and label to Off and add vc-off class when false', () => {
+    reflectEnabled(false)
+
+    expect(toggle.checked).toBe(false)
+    expect(toggleLabel.textContent).toBe('Off')
+    expect(document.body.classList.contains('vc-off')).toBe(true)
   })
 })
