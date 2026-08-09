@@ -194,10 +194,7 @@
   function toggleFullscreen() {
     if (!activeVideo) return
     /* Try the closest player container first, then the video itself */
-    const container =
-      activeVideo.closest('[class*="player"]') ||
-      activeVideo.closest('[class*="Player"]') ||
-      activeVideo.parentElement
+    const container = activeVideo.closest('[class*="player" i]') || activeVideo.parentElement
     if (!document.fullscreenElement) {
       ;(container || activeVideo).requestFullscreen().catch((err) => {
         console.warn('[VideoController] container.requestFullscreen failed:', err)
