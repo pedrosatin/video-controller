@@ -194,10 +194,7 @@
   function toggleFullscreen() {
     if (!activeVideo) return
     /* Try the closest player container first, then the video itself */
-    const container =
-      activeVideo.closest('[class*="player"]') ||
-      activeVideo.closest('[class*="Player"]') ||
-      activeVideo.parentElement
+    const container = activeVideo.closest('[class*="player" i]') || activeVideo.parentElement
     if (!document.fullscreenElement) {
       ;(container || activeVideo).requestFullscreen().catch((err) => {
         console.warn('[VideoController] container.requestFullscreen failed:', err)
@@ -238,7 +235,9 @@
   panel.setAttribute('role', 'dialog')
   panel.setAttribute('aria-label', 'Video Controller')
 
-  panel.innerHTML = window.VC_PANEL_TEMPLATE
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(window.VC_PANEL_TEMPLATE, 'text/html')
+  panel.append(...doc.body.childNodes)
 
   // Populate dynamic button properties safely
   const btnBackLarge = panel.querySelector('#vc-back-large')
