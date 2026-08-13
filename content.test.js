@@ -17,7 +17,7 @@ global.chrome = {
 
 require('./scripts/utils.js')
 require('./panelTemplate.js')
-const { _get, _set, roundRate, clamp } = require('./content')
+const { _get, _set, roundRate, clamp, pointInRect } = require('./content')
 
 /* content.js renders times via window.formatDuration(s, '–:––') */
 const formatTime = (s) => window.formatDuration(s, '–:––')
@@ -315,6 +315,30 @@ describe('_set helper', () => {
     Object.preventExtensions(video)
 
     expect(() => _set(video, propertyName, expectedValue)).not.toThrow()
+  })
+})
+
+describe('pointInRect', () => {
+  const rect = { left: 10, right: 20, top: 10, bottom: 20 }
+
+  it('returns true when point is inside the rectangle', () => {
+    expect(pointInRect(15, 15, rect)).toBe(true)
+  })
+
+  it('returns true when point is exactly on the boundaries', () => {
+    expect(pointInRect(10, 15, rect)).toBe(true) // left edge
+    expect(pointInRect(20, 15, rect)).toBe(true) // right edge
+    expect(pointInRect(15, 10, rect)).toBe(true) // top edge
+    expect(pointInRect(15, 20, rect)).toBe(true) // bottom edge
+    expect(pointInRect(10, 10, rect)).toBe(true) // top-left corner
+    expect(pointInRect(20, 20, rect)).toBe(true) // bottom-right corner
+  })
+
+  it('returns false when point is outside the rectangle', () => {
+    expect(pointInRect(5, 15, rect)).toBe(false) // left of rect
+    expect(pointInRect(25, 15, rect)).toBe(false) // right of rect
+    expect(pointInRect(15, 5, rect)).toBe(false) // above rect
+    expect(pointInRect(15, 25, rect)).toBe(false) // below rect
   })
 })
 
