@@ -941,23 +941,18 @@
   }
 
   const mutObs = new MutationObserver((mutations) => {
-    let checkRemovals = false
     for (const m of mutations) {
       /* Ignore mutations of our own UI: rebuilding the selector options
          mutates the panel, which would re-trigger this observer and
          re-rebuild the selector — an infinite loop that freezes the page. */
       if (m.target === panel || panel.contains(m.target)) continue
       processAddedNodes(m.addedNodes)
-      if (m.removedNodes.length > 0) checkRemovals = true
-    }
-
-    if (checkRemovals) {
-      handleRemovals()
     }
   })
 
   mutObs.observe(document.documentElement, { childList: true, subtree: true })
   scanVideos()
+  setInterval(handleRemovals, 1000)
 
   // ══════════════════════════════════════════════════════════════════════════
   // POPUP CONNECTION (for popup.js)
