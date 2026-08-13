@@ -17,10 +17,103 @@ global.chrome = {
 
 require('./scripts/utils.js')
 require('./panelTemplate.js')
-const { _get, _set, roundRate, clamp } = require('./content')
+const { _get, _set, roundRate, clamp, videoSummaries, scanVideos, FRAME_TOKEN } = require('./content')
 
 /* content.js renders times via window.formatDuration(s, '–:––') */
 const formatTime = (s) => window.formatDuration(s, '–:––')
+
+describe('videoSummaries', () => {
+  let video
+
+  beforeEach(() => {
+    document.body.innerHTML = ''
+    video = document.createElement('video')
+    document.body.appendChild(video)
+  })
+
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('handles empty list when no videos are present', () => {
+    document.body.innerHTML = ''
+    scanVideos()
+    expect(videoSummaries()).toEqual([])
+  })
+
+  it('maps standard video properties correctly', () => {
+    video.title = 'Test Video'
+    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/video.mp4', configurable: true })
+
+    // For properties accessed via _get in content.js, they use HTMLMediaElement.prototype getters if available.
+    // In JSDOM, HTMLMediaElement.prototype has getters for some properties, so we should mock the prototype.
+    const origDurationDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'duration')
+    const origPausedDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'paused')
+
+    Object.defineProperty(HTMLMediaElement.prototype, 'duration', { get: () => 120.5, configurable: true })
+    Object.defineProperty(HTMLMediaElement.prototype, 'paused', { get: () => true, configurable: true })
+
+    scanVideos()
+    const summaries = videoSummaries()
+
+    // Restore prototype
+    if (origDurationDesc) Object.defineProperty(HTMLMediaElement.prototype, 'duration', origDurationDesc)
+    else delete HTMLMediaElement.prototype.duration
+
+    if (origPausedDesc) Object.defineProperty(HTMLMediaElement.prototype, 'paused', origPausedDesc)
+    else delete HTMLMediaElement.prototype.paused
+
+    expect(summaries).toHaveLength(1)
+    expect(summaries[0]).toMatchObject({
+      frameToken: FRAME_TOKEN,
+      src: 'video.mp4',
+      title: 'Test Video',
+      duration: 120.5,
+      paused: true
+    })
+    expect(summaries[0].id).toBeGreaterThan(0)
+  })
+
+  it('truncates long src and title to 60 characters', () => {
+    const longTitle = 'A'.repeat(100)
+    const longSrcName = 'B'.repeat(100) + '.mp4'
+    video.title = longTitle
+    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/' + longSrcName, configurable: true })
+
+    scanVideos()
+    const summaries = videoSummaries()
+
+    expect(summaries[0].title).toBe('A'.repeat(60))
+    expect(summaries[0].src).toBe('B'.repeat(60))
+  })
+
+  it('strips query parameters from src', () => {
+    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/video.mp4?v=123&t=456', configurable: true })
+
+    scanVideos()
+    const summaries = videoSummaries()
+
+    expect(summaries[0].src).toBe('video.mp4')
+  })
+
+  it('falls back to aria-label if title is missing', () => {
+    video.setAttribute('aria-label', 'Aria Label Title')
+
+    scanVideos()
+    const summaries = videoSummaries()
+
+    expect(summaries[0].title).toBe('Aria Label Title')
+  })
+
+  it('handles missing currentSrc gracefully', () => {
+    Object.defineProperty(video, 'currentSrc', { value: '', configurable: true })
+
+    scanVideos()
+    const summaries = videoSummaries()
+
+    expect(summaries[0].src).toBe('')
+  })
+})
 
 describe('clamp', () => {
   it('returns the value when it is within bounds', () => {
