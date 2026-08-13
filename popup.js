@@ -42,10 +42,9 @@
     chrome.storage.local.set({ vcEnabled: enabled })
   })
 
-  /* Delegates to the shared util (scripts/utils.js, loaded by popup.html);
-     keeps the old falsy semantics: 0/NaN/Infinity -> '' ("Duration unknown") */
+  /* Delegates to the shared util (scripts/utils.js, loaded by popup.html) */
   function formatDuration(s) {
-    return s ? window.formatDuration(s, '') : ''
+    return window.formatDuration(s, '')
   }
 
   function showMessage(text) {

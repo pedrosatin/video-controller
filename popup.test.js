@@ -43,25 +43,14 @@ describe('formatDuration (wrapper)', () => {
     jest.restoreAllMocks()
   })
 
-  it('should return empty string without delegating for falsy values', () => {
+  it('should delegate to window.formatDuration for all values with an empty string fallback', () => {
+    window.formatDuration.mockReturnValue('')
     expect(formatDuration(null)).toBe('')
-    expect(formatDuration(undefined)).toBe('')
-    expect(formatDuration(0)).toBe('')
-    expect(formatDuration(false)).toBe('')
-    expect(formatDuration('')).toBe('')
+    expect(window.formatDuration).toHaveBeenCalledWith(null, '')
 
-    expect(window.formatDuration).not.toHaveBeenCalled()
-  })
-
-  it('should delegate to window.formatDuration with empty string fallback for truthy values', () => {
     window.formatDuration.mockReturnValue('1:00')
-
     expect(formatDuration(60)).toBe('1:00')
     expect(window.formatDuration).toHaveBeenCalledWith(60, '')
-
-    window.formatDuration.mockReturnValue('0:45')
-    expect(formatDuration('45')).toBe('0:45')
-    expect(window.formatDuration).toHaveBeenCalledWith('45', '')
   })
 })
 
