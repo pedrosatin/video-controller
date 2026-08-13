@@ -34,7 +34,7 @@
     try {
       if (setter) setter.call(video, value)
       else video[prop] = value
-    } catch (_e) {
+    } catch {
       /* silently ignore; the native API should always work */
     }
   }
@@ -43,7 +43,7 @@
     const getter = _rawGet(prop)
     try {
       return getter ? getter.call(video) : video[prop]
-    } catch (_e) {
+    } catch {
       return video[prop]
     }
   }
@@ -308,12 +308,12 @@
     if (!POPOVER_OK) return
     try {
       el.hidePopover()
-    } catch (_e) {
+    } catch {
       /* not open */
     }
     try {
       el.showPopover()
-    } catch (_e) {
+    } catch {
       /* disconnected */
     }
   }
@@ -322,7 +322,7 @@
     if (!POPOVER_OK) return
     try {
       el.hidePopover()
-    } catch (_e) {
+    } catch {
       /* not open */
     }
   }
@@ -332,7 +332,7 @@
     if (POPOVER_OK && !indicator.matches(':popover-open')) {
       try {
         indicator.showPopover()
-      } catch (_e) {
+      } catch {
         /* disconnected */
       }
     }
