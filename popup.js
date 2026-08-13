@@ -156,6 +156,6 @@
 
   /* Export for testing */
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { formatDuration, reflectEnabled }
+    module.exports = { formatDuration, reflectEnabled, createVideoCard }
   }
 })()
