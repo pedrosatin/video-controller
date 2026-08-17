@@ -357,3 +357,33 @@ describe('_get helper error path', () => {
     }
   })
 })
+
+describe('toggleMute', () => {
+  let video
+  const { toggleMute, attachVideo, applyEnabled, hidePanel } = require('./content')
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    applyEnabled(true)
+  })
+
+  it('toggles muted state from false to true', () => {
+    video.muted = false
+    attachVideo(video)
+    toggleMute()
+    expect(video.muted).toBe(true)
+  })
+
+  it('toggles muted state from true to false', () => {
+    video.muted = true
+    attachVideo(video)
+    toggleMute()
+    expect(video.muted).toBe(false)
+  })
+
+  it('does nothing if no active video', () => {
+    hidePanel() // Unsets activeVideo
+    // Make sure toggleMute doesn't throw when activeVideo is null
+    expect(() => toggleMute()).not.toThrow()
+  })
+})
