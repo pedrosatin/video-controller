@@ -454,13 +454,16 @@
   // VIDEO REGISTRY
   // ══════════════════════════════════════════════════════════════════════════
   function pruneVideos() {
+    let removed = false
     for (const v of knownVideos) {
       if (!v.isConnected) {
         knownVideos.delete(v)
         visibleVideos.delete(v)
         if (visibilityObserver) visibilityObserver.unobserve(v)
+        removed = true
       }
     }
+    return removed
   }
 
   function connectedVideos() {
@@ -926,15 +929,7 @@
   }
 
   function handleRemovals() {
-    let removed = false
-    for (const v of knownVideos) {
-      if (!v.isConnected) {
-        removed = true
-        break
-      }
-    }
-    if (removed) {
-      pruneVideos()
+    if (pruneVideos()) {
       if (activeVideo && !activeVideo.isConnected) hidePanel()
       else if (panel.style.display !== 'none') refreshVideoSelector()
     }
