@@ -1015,6 +1015,14 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { _get, _set, clamp, roundRate }
+    module.exports = {
+      _get,
+      _set,
+      clamp,
+      roundRate,
+      setSpeed,
+      _setActiveVideo: (v) => { activeVideo = v },
+      _getUserRate: () => userRate
+    }
   }
 })()
