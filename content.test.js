@@ -17,7 +17,7 @@ global.chrome = {
 
 require('./scripts/utils.js')
 require('./panelTemplate.js')
-const { _get, _set, roundRate, clamp } = require('./content')
+const { _get, _set, roundRate, clamp, pointInRect } = require('./content')
 
 /* content.js renders times via window.formatDuration(s, '–:––') */
 const formatTime = (s) => window.formatDuration(s, '–:––')
@@ -355,5 +355,34 @@ describe('_get helper error path', () => {
         delete HTMLMediaElement.prototype[propertyName]
       }
     }
+  })
+})
+
+describe('pointInRect', () => {
+  const rect = { left: 10, right: 100, top: 20, bottom: 200 }
+
+  test('returns true for a point strictly inside the rect', () => {
+    expect(pointInRect(50, 100, rect)).toBe(true)
+  })
+
+  test('returns true for a point exactly on the boundaries', () => {
+    // Corners
+    expect(pointInRect(10, 20, rect)).toBe(true) // Top-left
+    expect(pointInRect(100, 20, rect)).toBe(true) // Top-right
+    expect(pointInRect(10, 200, rect)).toBe(true) // Bottom-left
+    expect(pointInRect(100, 200, rect)).toBe(true) // Bottom-right
+    // Edges
+    expect(pointInRect(50, 20, rect)).toBe(true) // Top edge
+    expect(pointInRect(50, 200, rect)).toBe(true) // Bottom edge
+    expect(pointInRect(10, 100, rect)).toBe(true) // Left edge
+    expect(pointInRect(100, 100, rect)).toBe(true) // Right edge
+  })
+
+  test('returns false for a point outside the rect', () => {
+    expect(pointInRect(5, 100, rect)).toBe(false) // Too far left
+    expect(pointInRect(105, 100, rect)).toBe(false) // Too far right
+    expect(pointInRect(50, 15, rect)).toBe(false) // Too far up
+    expect(pointInRect(50, 205, rect)).toBe(false) // Too far down
+    expect(pointInRect(0, 0, rect)).toBe(false) // Completely outside (top-left)
   })
 })
