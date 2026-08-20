@@ -911,22 +911,11 @@
     if (panel.style.display !== 'none') refreshVideoSelector()
   }
 
-  function scanVideos() {
-    document.querySelectorAll('video').forEach(registerVideo)
-  }
+  const allVideos = document.getElementsByTagName('video')
 
-  function processAddedNodes(addedNodes) {
-    for (const node of addedNodes) {
-      if (node.nodeType !== Node.ELEMENT_NODE) continue
-      if (node === panel || node === indicator) continue
-      if (node.tagName === 'VIDEO') {
-        registerVideo(node)
-      } else {
-        const videos = node.getElementsByTagName('video')
-        for (let i = 0; i < videos.length; i++) {
-          registerVideo(videos[i])
-        }
-      }
+  function scanVideos() {
+    for (let i = 0; i < allVideos.length; i++) {
+      registerVideo(allVideos[i])
     }
   }
 
@@ -947,15 +936,28 @@
 
   const mutObs = new MutationObserver((mutations) => {
     let checkRemovals = false
+    let checkAdditions = false
+
     for (const m of mutations) {
       /* Ignore mutations of our own UI: rebuilding the selector options
          mutates the panel, which would re-trigger this observer and
          re-rebuild the selector — an infinite loop that freezes the page. */
       if (m.target === panel || panel.contains(m.target)) continue
-      processAddedNodes(m.addedNodes)
+
+      if (!checkAdditions) {
+        for (let i = 0; i < m.addedNodes.length; i++) {
+          if (m.addedNodes[i].nodeType === Node.ELEMENT_NODE) {
+            checkAdditions = true
+            break
+          }
+        }
+      }
       if (m.removedNodes.length > 0) checkRemovals = true
     }
 
+    if (checkAdditions) {
+      scanVideos()
+    }
     if (checkRemovals) {
       handleRemovals()
     }
