@@ -1017,6 +1017,17 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { _get, _set, clamp, roundRate, togglePlay, attachVideo, hidePanel, promoteToTopLayer }
+    module.exports = {
+      _get,
+      _set,
+      clamp,
+      roundRate,
+      togglePlay,
+      toggleMute,
+      attachVideo,
+      hidePanel,
+      applyEnabled,
+      promoteToTopLayer,
+    }
   }
 })()
