@@ -21,6 +21,9 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": ">=24"
+  },
   "bugs": {
     "url": "https://github.com/pedrosatin/video-controller/issues"
   },
@@ -28,7 +31,6 @@
   "devDependencies": {
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
-    "jsdom": "^29.1.1",
     "oxfmt": "^0.59.0",
     "oxlint": "^1.74.0"
   }
