@@ -1022,6 +1022,7 @@
       _set,
       clamp,
       roundRate,
+      pointInRect,
       setSpeed,
       _setActiveVideo: (v) => { activeVideo = v },
       _getUserRate: () => userRate,
