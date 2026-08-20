@@ -33,7 +33,39 @@ document.body.innerHTML = `
 
 require('./scripts/utils.js')
 global.mockPostMessage = jest.fn()
-const { formatDuration, reflectEnabled, createVideoCard } = require('./popup.js')
+const { formatDuration, reflectEnabled, createVideoCard, showMessage } = require('./popup.js')
+
+describe('showMessage', () => {
+  let list
+
+  beforeEach(() => {
+    list = document.getElementById('video-list')
+    list.innerHTML = '<div>Old content</div>'
+  })
+
+  it('should clear existing content and append a paragraph with the message', () => {
+    showMessage('No videos found')
+
+    expect(list.children.length).toBe(1)
+
+    const p = list.firstElementChild
+    expect(p.tagName).toBe('P')
+    expect(p.id).toBe('no-videos')
+    expect(p.textContent).toBe('No videos found')
+  })
+
+  it('should safely render special characters preventing XSS', () => {
+    showMessage('<img src="x" onerror="alert(1)">')
+
+    expect(list.children.length).toBe(1)
+
+    const p = list.firstElementChild
+    expect(p.tagName).toBe('P')
+    expect(p.id).toBe('no-videos')
+    expect(p.textContent).toBe('<img src="x" onerror="alert(1)">')
+    expect(p.innerHTML).toBe('&lt;img src="x" onerror="alert(1)"&gt;')
+  })
+})
 
 describe('formatDuration (wrapper)', () => {
   beforeEach(() => {
