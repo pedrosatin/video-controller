@@ -1032,6 +1032,9 @@
       hidePanel,
       applyEnabled,
       promoteToTopLayer,
+      videoSummaries,
+      scanVideos,
+      FRAME_TOKEN,
     }
   }
 })()
