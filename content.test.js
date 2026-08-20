@@ -15,9 +15,37 @@ global.chrome = {
   },
 }
 
+HTMLElement.prototype.showPopover = jest.fn()
+HTMLElement.prototype.hidePopover = jest.fn()
+
+/* jsdom's matches() doesn't support ':popover-open' (unsupported CSS4 pseudo-class);
+   without this, any code path that mocks showPopover into existence (making
+   POPOVER_OK true) throws a SyntaxError the first time it hits that selector. */
+const _origMatches = Element.prototype.matches
+Element.prototype.matches = function (selector) {
+  if (selector === ':popover-open') return false
+  return _origMatches.call(this, selector)
+}
+
 require('./scripts/utils.js')
 require('./panelTemplate.js')
-const { _get, _set, roundRate, clamp, videoSummaries, scanVideos, FRAME_TOKEN } = require('./content')
+const {
+  _get,
+  _set,
+  roundRate,
+  clamp,
+  pointInRect,
+  setSpeed,
+  _setActiveVideo,
+  _getUserRate,
+  togglePlay,
+  attachVideo,
+  hidePanel,
+  promoteToTopLayer,
+  videoSummaries,
+  scanVideos,
+  FRAME_TOKEN,
+} = require('./content')
 
 /* content.js renders times via window.formatDuration(s, '–:––') */
 const formatTime = (s) => window.formatDuration(s, '–:––')
@@ -448,5 +476,214 @@ describe('_get helper error path', () => {
         delete HTMLMediaElement.prototype[propertyName]
       }
     }
+  })
+})
+
+describe('pointInRect', () => {
+  const rect = { left: 10, right: 100, top: 20, bottom: 200 }
+
+  test('returns true for a point strictly inside the rect', () => {
+    expect(pointInRect(50, 100, rect)).toBe(true)
+  })
+
+  test('returns true for a point exactly on the boundaries', () => {
+    // Corners
+    expect(pointInRect(10, 20, rect)).toBe(true) // Top-left
+    expect(pointInRect(100, 20, rect)).toBe(true) // Top-right
+    expect(pointInRect(10, 200, rect)).toBe(true) // Bottom-left
+    expect(pointInRect(100, 200, rect)).toBe(true) // Bottom-right
+    // Edges
+    expect(pointInRect(50, 20, rect)).toBe(true) // Top edge
+    expect(pointInRect(50, 200, rect)).toBe(true) // Bottom edge
+    expect(pointInRect(10, 100, rect)).toBe(true) // Left edge
+    expect(pointInRect(100, 100, rect)).toBe(true) // Right edge
+  })
+
+  test('returns false for a point outside the rect', () => {
+    expect(pointInRect(5, 100, rect)).toBe(false) // Too far left
+    expect(pointInRect(105, 100, rect)).toBe(false) // Too far right
+    expect(pointInRect(50, 15, rect)).toBe(false) // Too far up
+    expect(pointInRect(50, 205, rect)).toBe(false) // Too far down
+    expect(pointInRect(0, 0, rect)).toBe(false) // Completely outside (top-left)
+  })
+})
+
+describe('setSpeed', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    video.playbackRate = 1
+    _setActiveVideo(video)
+  })
+
+  afterEach(() => {
+    _setActiveVideo(null)
+  })
+
+  it('safely returns if activeVideo is not set', () => {
+    _setActiveVideo(null)
+    expect(() => setSpeed(2)).not.toThrow()
+    // Cannot easily check the return value of early return, but we can verify
+    // that no state/video property changes occurred if we mock it, or simply
+    // ensure it doesn't crash and userRate isn't set unexpectedly
+    expect(_getUserRate()).toBeNull()
+  })
+
+  it('sets playbackRate correctly for normal values', () => {
+    setSpeed(1.5)
+    expect(video.playbackRate).toBe(1.5)
+    expect(_getUserRate()).toBe(1.5)
+  })
+
+  it('clamps the rate to the minimum allowed value (0.1)', () => {
+    setSpeed(0.05)
+    expect(video.playbackRate).toBe(0.1)
+    expect(_getUserRate()).toBe(0.1)
+  })
+
+  it('clamps the rate to the maximum allowed value (16)', () => {
+    setSpeed(20)
+    expect(video.playbackRate).toBe(16)
+    expect(_getUserRate()).toBe(16)
+  })
+
+  it('rounds the rate to 2 decimal places', () => {
+    setSpeed(1.123)
+    expect(video.playbackRate).toBe(1.12)
+    expect(_getUserRate()).toBe(1.12)
+
+    setSpeed(1.125)
+    expect(video.playbackRate).toBe(1.13)
+    expect(_getUserRate()).toBe(1.13)
+  })
+})
+
+describe('toggleMute', () => {
+  let video
+  const { toggleMute, attachVideo, applyEnabled, hidePanel } = require('./content')
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    applyEnabled(true)
+  })
+
+  it('toggles muted state from false to true', () => {
+    video.muted = false
+    attachVideo(video)
+    toggleMute()
+    expect(video.muted).toBe(true)
+  })
+
+  it('toggles muted state from true to false', () => {
+    video.muted = true
+    attachVideo(video)
+    toggleMute()
+    expect(video.muted).toBe(false)
+  })
+
+  it('does nothing if no active video', () => {
+    hidePanel() // Unsets activeVideo
+    // Make sure toggleMute doesn't throw when activeVideo is null
+    expect(() => toggleMute()).not.toThrow()
+  })
+})
+
+describe('togglePlay', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+    hidePanel()
+  })
+
+  it('does nothing if no active video is attached', () => {
+    const playSpy = jest.spyOn(video, 'play')
+    const pauseSpy = jest.spyOn(video, 'pause')
+
+    hidePanel()
+    togglePlay()
+
+    expect(playSpy).not.toHaveBeenCalled()
+    expect(pauseSpy).not.toHaveBeenCalled()
+  })
+
+  it('plays the video if it is currently paused', () => {
+    attachVideo(video)
+
+    const playPromise = Promise.resolve()
+    const playSpy = jest.spyOn(video, 'play').mockReturnValue(playPromise)
+
+    jest.spyOn(HTMLMediaElement.prototype, 'paused', 'get').mockReturnValue(true)
+
+    togglePlay()
+
+    expect(playSpy).toHaveBeenCalled()
+  })
+
+  it('catches and logs errors when play() fails', async () => {
+    attachVideo(video)
+
+    const error = new Error('Play failed')
+    const playPromise = Promise.reject(error)
+    jest.spyOn(video, 'play').mockReturnValue(playPromise)
+
+    jest.spyOn(HTMLMediaElement.prototype, 'paused', 'get').mockReturnValue(true)
+
+    togglePlay()
+
+    // Wait for promise rejection to be caught
+    await playPromise.catch(() => {})
+
+    expect(console.warn).toHaveBeenCalledWith('[VideoController] play failed:', error)
+  })
+
+  it('pauses the video if it is currently playing', () => {
+    attachVideo(video)
+
+    const pauseSpy = jest.spyOn(video, 'pause').mockImplementation(() => {})
+
+    jest.spyOn(HTMLMediaElement.prototype, 'paused', 'get').mockReturnValue(false)
+
+    togglePlay()
+
+    expect(pauseSpy).toHaveBeenCalled()
+  })
+})
+
+describe('promoteToTopLayer', () => {
+  let el
+
+  beforeEach(() => {
+    el = document.createElement('div')
+    el.showPopover = jest.fn()
+    el.hidePopover = jest.fn()
+  })
+
+  it('hides and then shows popover normally', () => {
+    promoteToTopLayer(el)
+    expect(el.hidePopover).toHaveBeenCalled()
+    expect(el.showPopover).toHaveBeenCalled()
+  })
+
+  it('silently catches error when hidePopover throws (e.g. not open)', () => {
+    el.hidePopover.mockImplementation(() => {
+      throw new Error('Not open')
+    })
+    expect(() => promoteToTopLayer(el)).not.toThrow()
+    expect(el.showPopover).toHaveBeenCalled()
+  })
+
+  it('silently catches error when showPopover throws (e.g. disconnected)', () => {
+    el.showPopover.mockImplementation(() => {
+      throw new Error('Disconnected')
+    })
+    expect(() => promoteToTopLayer(el)).not.toThrow()
+    expect(el.hidePopover).toHaveBeenCalled()
   })
 })
