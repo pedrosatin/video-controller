@@ -214,6 +214,6 @@
 
   /* Export for testing */
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { formatDuration, reflectEnabled, showMessage }
+    module.exports = { formatDuration, reflectEnabled, createVideoCard, showMessage }
   }
 })()
