@@ -62,6 +62,20 @@
     return el
   }
 
+  function bindVideoCardEvents(card, btn, v) {
+    // Clear old listeners by replacing elements with clones if needed, or simply handle it.
+    // Instead of replacing the whole element, we'll store a reference to the current video object on the element.
+    card._vcVideo = v
+    if (!card._vcBound) {
+      card._vcBound = true
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation()
+        openVideo(card._vcVideo)
+      })
+      card.addEventListener('click', () => openVideo(card._vcVideo))
+    }
+  }
+
   function createVideoCard(v, i) {
     const name = v.title || v.src || `Video ${i + 1}`
     const dur = formatDuration(v.duration)
@@ -78,38 +92,82 @@
     const metaEl = createElement('div', 'vc-meta', dur ? `Duration: ${dur}` : 'Duration unknown')
 
     const btn = createElement('button', 'vc-open-btn', 'Control')
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation()
-      openVideo(v)
-    })
 
-    /* Also allow clicking the card */
-    card.addEventListener('click', () => openVideo(v))
+    bindVideoCardEvents(card, btn, v)
 
     info.appendChild(nameEl)
     info.appendChild(metaEl)
     card.appendChild(thumb)
     card.appendChild(info)
     card.appendChild(btn)
+
+    card.dataset.id = `${v.frameToken}:${v.id}`
     return card
+  }
+
+  function updateVideoCard(card, v, i) {
+    const name = v.title || v.src || `Video ${i + 1}`
+    const dur = formatDuration(v.duration)
+    const state = v.paused ? '⏸' : '▶'
+
+    card.children[0].textContent = state
+
+    const info = card.children[1]
+    info.children[0].textContent = name
+    info.children[0].title = name
+    info.children[1].textContent = dur ? `Duration: ${dur}` : 'Duration unknown'
+
+    // Update the video reference for events
+    card._vcVideo = v
   }
 
   function renderVideos() {
     const videos = [...found.values()]
-    while (list.firstChild) list.removeChild(list.firstChild)
 
     if (videos.length === 0) {
       showMessage('No videos found on this page. Navigate to a page with a <video> element.')
       return
     }
 
-    const fragment = document.createDocumentFragment()
+    // ensure no-videos message is removed if we are about to render videos
+    const noVideos = list.querySelector('#no-videos')
+    if (noVideos) {
+      list.removeChild(noVideos)
+    }
+
+    const existingMap = new Map()
+    for (const child of list.children) {
+      if (child.dataset.id) {
+        existingMap.set(child.dataset.id, child)
+      }
+    }
+
+    const newOrder = []
 
     videos.forEach((v, i) => {
-      fragment.appendChild(createVideoCard(v, i))
+      const id = `${v.frameToken}:${v.id}`
+      let node = existingMap.get(id)
+
+      if (node) {
+        updateVideoCard(node, v, i)
+        existingMap.delete(id)
+      } else {
+        node = createVideoCard(v, i)
+      }
+      newOrder.push(node)
     })
 
-    list.appendChild(fragment)
+    /* Remove elements no longer present */
+    for (const child of existingMap.values()) {
+      list.removeChild(child)
+    }
+
+    /* Reorder and append new ones */
+    newOrder.forEach((node, idx) => {
+      if (list.children[idx] !== node) {
+        list.insertBefore(node, list.children[idx] || null)
+      }
+    })
   }
 
   function openVideo(v) {
@@ -155,6 +213,6 @@
 
   /* Export for testing */
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { formatDuration, reflectEnabled }
+    module.exports = { formatDuration, reflectEnabled, createVideoCard, showMessage }
   }
 })()
