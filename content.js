@@ -304,13 +304,17 @@
     indicator.popover = 'manual'
   }
 
-  function promoteToTopLayer(el) {
-    if (!POPOVER_OK) return
+  function safeHidePopover(el) {
     try {
       el.hidePopover()
     } catch (_e) {
       /* not open */
     }
+  }
+
+  function promoteToTopLayer(el) {
+    if (!POPOVER_OK) return
+    safeHidePopover(el)
     try {
       el.showPopover()
     } catch (_e) {
@@ -320,11 +324,7 @@
 
   function dropFromTopLayer(el) {
     if (!POPOVER_OK) return
-    try {
-      el.hidePopover()
-    } catch (_e) {
-      /* not open */
-    }
+    safeHidePopover(el)
   }
 
   function showIndicatorEl() {
