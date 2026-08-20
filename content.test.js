@@ -29,7 +29,19 @@ Element.prototype.matches = function (selector) {
 
 require('./scripts/utils.js')
 require('./panelTemplate.js')
-const { _get, _set, roundRate, clamp, togglePlay, attachVideo, hidePanel, promoteToTopLayer } = require('./content')
+const {
+  _get,
+  _set,
+  roundRate,
+  clamp,
+  setSpeed,
+  _setActiveVideo,
+  _getUserRate,
+  togglePlay,
+  attachVideo,
+  hidePanel,
+  promoteToTopLayer,
+} = require('./content')
 
 /* content.js renders times via window.formatDuration(s, '–:––') */
 const formatTime = (s) => window.formatDuration(s, '–:––')
@@ -367,6 +379,57 @@ describe('_get helper error path', () => {
         delete HTMLMediaElement.prototype[propertyName]
       }
     }
+  })
+})
+
+describe('setSpeed', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    video.playbackRate = 1
+    _setActiveVideo(video)
+  })
+
+  afterEach(() => {
+    _setActiveVideo(null)
+  })
+
+  it('safely returns if activeVideo is not set', () => {
+    _setActiveVideo(null)
+    expect(() => setSpeed(2)).not.toThrow()
+    // Cannot easily check the return value of early return, but we can verify
+    // that no state/video property changes occurred if we mock it, or simply
+    // ensure it doesn't crash and userRate isn't set unexpectedly
+    expect(_getUserRate()).toBeNull()
+  })
+
+  it('sets playbackRate correctly for normal values', () => {
+    setSpeed(1.5)
+    expect(video.playbackRate).toBe(1.5)
+    expect(_getUserRate()).toBe(1.5)
+  })
+
+  it('clamps the rate to the minimum allowed value (0.1)', () => {
+    setSpeed(0.05)
+    expect(video.playbackRate).toBe(0.1)
+    expect(_getUserRate()).toBe(0.1)
+  })
+
+  it('clamps the rate to the maximum allowed value (16)', () => {
+    setSpeed(20)
+    expect(video.playbackRate).toBe(16)
+    expect(_getUserRate()).toBe(16)
+  })
+
+  it('rounds the rate to 2 decimal places', () => {
+    setSpeed(1.123)
+    expect(video.playbackRate).toBe(1.12)
+    expect(_getUserRate()).toBe(1.12)
+
+    setSpeed(1.125)
+    expect(video.playbackRate).toBe(1.13)
+    expect(_getUserRate()).toBe(1.13)
   })
 })
 
