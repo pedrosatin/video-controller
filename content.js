@@ -34,7 +34,7 @@
     try {
       if (setter) setter.call(video, value)
       else video[prop] = value
-    } catch (_e) {
+    } catch {
       /* silently ignore; the native API should always work */
     }
   }
@@ -43,7 +43,7 @@
     const getter = _rawGet(prop)
     try {
       return getter ? getter.call(video) : video[prop]
-    } catch (_e) {
+    } catch {
       return video[prop]
     }
   }
@@ -304,27 +304,27 @@
     indicator.popover = 'manual'
   }
 
-  function promoteToTopLayer(el) {
-    if (!POPOVER_OK) return
+  function safeHidePopover(el) {
     try {
       el.hidePopover()
-    } catch (_e) {
+    } catch {
       /* not open */
     }
+  }
+
+  function promoteToTopLayer(el) {
+    if (!POPOVER_OK) return
+    safeHidePopover(el)
     try {
       el.showPopover()
-    } catch (_e) {
+    } catch {
       /* disconnected */
     }
   }
 
   function dropFromTopLayer(el) {
     if (!POPOVER_OK) return
-    try {
-      el.hidePopover()
-    } catch (_e) {
-      /* not open */
-    }
+    safeHidePopover(el)
   }
 
   function showIndicatorEl() {
@@ -332,7 +332,7 @@
     if (POPOVER_OK && !indicator.matches(':popover-open')) {
       try {
         indicator.showPopover()
-      } catch (_e) {
+      } catch {
         /* disconnected */
       }
     }
@@ -510,7 +510,11 @@
     }
     selectorRow.style.display = 'flex'
 
-    const snapshot = videos.map((v) => videoIds.get(v)).join(',')
+    let snapshot = ''
+    for (let i = 0; i < videos.length; i++) {
+      if (i > 0) snapshot += ','
+      snapshot += videoIds.get(videos[i])
+    }
     if (snapshot !== selectorSnapshot) {
       rebuildVideoOptions(videos, snapshot)
     }
@@ -655,16 +659,17 @@
   // ══════════════════════════════════════════════════════════════════════════
   playBtn.addEventListener('click', togglePlay)
 
-  q('#vc-back-large').addEventListener('click', () => seek(-SEEK_LARGE))
-  q('#vc-back-small').addEventListener('click', () => seek(-SEEK_SMALL))
-  q('#vc-fwd-small').addEventListener('click', () => seek(+SEEK_SMALL))
-  q('#vc-fwd-large').addEventListener('click', () => seek(+SEEK_LARGE))
-
-  q('#vc-spd-m-c').addEventListener('click', () => changeSpeed(-SPEED_COARSE))
-  q('#vc-spd-m-f').addEventListener('click', () => changeSpeed(-SPEED_FINE))
-  q('#vc-spd-rst').addEventListener('click', () => setSpeed(1))
-  q('#vc-spd-p-f').addEventListener('click', () => changeSpeed(+SPEED_FINE))
-  q('#vc-spd-p-c').addEventListener('click', () => changeSpeed(+SPEED_COARSE))
+  ;[
+    ['#vc-back-large', () => seek(-SEEK_LARGE)],
+    ['#vc-back-small', () => seek(-SEEK_SMALL)],
+    ['#vc-fwd-small', () => seek(+SEEK_SMALL)],
+    ['#vc-fwd-large', () => seek(+SEEK_LARGE)],
+    ['#vc-spd-m-c', () => changeSpeed(-SPEED_COARSE)],
+    ['#vc-spd-m-f', () => changeSpeed(-SPEED_FINE)],
+    ['#vc-spd-rst', () => setSpeed(1)],
+    ['#vc-spd-p-f', () => changeSpeed(+SPEED_FINE)],
+    ['#vc-spd-p-c', () => changeSpeed(+SPEED_COARSE)],
+  ].forEach(([sel, fn]) => q(sel).addEventListener('click', fn))
 
   presetBtns.forEach((btn) => {
     btn.addEventListener('click', () => setSpeed(parseFloat(btn.dataset.speed)))
@@ -909,22 +914,11 @@
     if (panel.style.display !== 'none') refreshVideoSelector()
   }
 
-  function scanVideos() {
-    document.querySelectorAll('video').forEach(registerVideo)
-  }
+  const allVideos = document.getElementsByTagName('video')
 
-  function processAddedNodes(addedNodes) {
-    for (const node of addedNodes) {
-      if (node.nodeType !== Node.ELEMENT_NODE) continue
-      if (node === panel || node === indicator) continue
-      if (node.tagName === 'VIDEO') {
-        registerVideo(node)
-      } else {
-        const videos = node.getElementsByTagName('video')
-        for (let i = 0; i < videos.length; i++) {
-          registerVideo(videos[i])
-        }
-      }
+  function scanVideos() {
+    for (let i = 0; i < allVideos.length; i++) {
+      registerVideo(allVideos[i])
     }
   }
 
@@ -937,15 +931,28 @@
 
   const mutObs = new MutationObserver((mutations) => {
     let checkRemovals = false
+    let checkAdditions = false
+
     for (const m of mutations) {
       /* Ignore mutations of our own UI: rebuilding the selector options
          mutates the panel, which would re-trigger this observer and
          re-rebuild the selector — an infinite loop that freezes the page. */
       if (m.target === panel || panel.contains(m.target)) continue
-      processAddedNodes(m.addedNodes)
+
+      if (!checkAdditions) {
+        for (let i = 0; i < m.addedNodes.length; i++) {
+          if (m.addedNodes[i].nodeType === Node.ELEMENT_NODE) {
+            checkAdditions = true
+            break
+          }
+        }
+      }
       if (m.removedNodes.length > 0) checkRemovals = true
     }
 
+    if (checkAdditions) {
+      scanVideos()
+    }
     if (checkRemovals) {
       handleRemovals()
     }
@@ -1010,6 +1017,6 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { _get, _set, clamp, roundRate }
+    module.exports = { _get, _set, clamp, roundRate, promoteToTopLayer }
   }
 })()
