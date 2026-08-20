@@ -3,8 +3,7 @@
   "name": "Video Controller",
   "version": "1.0.7",
   "description": "Control any <video> element with a floating mini player. Override speed, seek, volume, fullscreen and more — even on sites that lock these controls.",
-  "permissions": ["storage"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": ["storage", "activeTab"],
   "action": {
     "default_popup": "popup.html",
     "default_title": "Video Controller",

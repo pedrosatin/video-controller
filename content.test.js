@@ -15,9 +15,21 @@ global.chrome = {
   },
 }
 
+HTMLElement.prototype.showPopover = jest.fn()
+HTMLElement.prototype.hidePopover = jest.fn()
+
+/* jsdom's matches() doesn't support ':popover-open' (unsupported CSS4 pseudo-class);
+   without this, any code path that mocks showPopover into existence (making
+   POPOVER_OK true) throws a SyntaxError the first time it hits that selector. */
+const _origMatches = Element.prototype.matches
+Element.prototype.matches = function (selector) {
+  if (selector === ':popover-open') return false
+  return _origMatches.call(this, selector)
+}
+
 require('./scripts/utils.js')
 require('./panelTemplate.js')
-const { _get, _set, roundRate, clamp } = require('./content')
+const { _get, _set, roundRate, clamp, togglePlay, attachVideo, hidePanel, promoteToTopLayer } = require('./content')
 
 /* content.js renders times via window.formatDuration(s, '–:––') */
 const formatTime = (s) => window.formatDuration(s, '–:––')
@@ -385,5 +397,104 @@ describe('toggleMute', () => {
     hidePanel() // Unsets activeVideo
     // Make sure toggleMute doesn't throw when activeVideo is null
     expect(() => toggleMute()).not.toThrow()
+  })
+})
+
+describe('togglePlay', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+    hidePanel()
+  })
+
+  it('does nothing if no active video is attached', () => {
+    const playSpy = jest.spyOn(video, 'play')
+    const pauseSpy = jest.spyOn(video, 'pause')
+
+    hidePanel()
+    togglePlay()
+
+    expect(playSpy).not.toHaveBeenCalled()
+    expect(pauseSpy).not.toHaveBeenCalled()
+  })
+
+  it('plays the video if it is currently paused', () => {
+    attachVideo(video)
+
+    const playPromise = Promise.resolve()
+    const playSpy = jest.spyOn(video, 'play').mockReturnValue(playPromise)
+
+    jest.spyOn(HTMLMediaElement.prototype, 'paused', 'get').mockReturnValue(true)
+
+    togglePlay()
+
+    expect(playSpy).toHaveBeenCalled()
+  })
+
+  it('catches and logs errors when play() fails', async () => {
+    attachVideo(video)
+
+    const error = new Error('Play failed')
+    const playPromise = Promise.reject(error)
+    jest.spyOn(video, 'play').mockReturnValue(playPromise)
+
+    jest.spyOn(HTMLMediaElement.prototype, 'paused', 'get').mockReturnValue(true)
+
+    togglePlay()
+
+    // Wait for promise rejection to be caught
+    await playPromise.catch(() => {})
+
+    expect(console.warn).toHaveBeenCalledWith('[VideoController] play failed:', error)
+  })
+
+  it('pauses the video if it is currently playing', () => {
+    attachVideo(video)
+
+    const pauseSpy = jest.spyOn(video, 'pause').mockImplementation(() => {})
+
+    jest.spyOn(HTMLMediaElement.prototype, 'paused', 'get').mockReturnValue(false)
+
+    togglePlay()
+
+    expect(pauseSpy).toHaveBeenCalled()
+  })
+})
+
+describe('promoteToTopLayer', () => {
+  let el
+
+  beforeEach(() => {
+    el = document.createElement('div')
+    el.showPopover = jest.fn()
+    el.hidePopover = jest.fn()
+  })
+
+  it('hides and then shows popover normally', () => {
+    promoteToTopLayer(el)
+    expect(el.hidePopover).toHaveBeenCalled()
+    expect(el.showPopover).toHaveBeenCalled()
+  })
+
+  it('silently catches error when hidePopover throws (e.g. not open)', () => {
+    el.hidePopover.mockImplementation(() => {
+      throw new Error('Not open')
+    })
+    expect(() => promoteToTopLayer(el)).not.toThrow()
+    expect(el.showPopover).toHaveBeenCalled()
+  })
+
+  it('silently catches error when showPopover throws (e.g. disconnected)', () => {
+    el.showPopover.mockImplementation(() => {
+      throw new Error('Disconnected')
+    })
+    expect(() => promoteToTopLayer(el)).not.toThrow()
+    expect(el.hidePopover).toHaveBeenCalled()
   })
 })
