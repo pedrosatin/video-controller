@@ -15,9 +15,12 @@ global.chrome = {
   },
 }
 
+HTMLElement.prototype.showPopover = jest.fn()
+HTMLElement.prototype.hidePopover = jest.fn()
+
 require('./scripts/utils.js')
 require('./panelTemplate.js')
-const { _get, _set, roundRate, clamp } = require('./content')
+const { _get, _set, roundRate, clamp, promoteToTopLayer } = require('./content')
 
 /* content.js renders times via window.formatDuration(s, '–:––') */
 const formatTime = (s) => window.formatDuration(s, '–:––')
@@ -355,5 +358,37 @@ describe('_get helper error path', () => {
         delete HTMLMediaElement.prototype[propertyName]
       }
     }
+  })
+})
+
+describe('promoteToTopLayer', () => {
+  let el
+
+  beforeEach(() => {
+    el = document.createElement('div')
+    el.showPopover = jest.fn()
+    el.hidePopover = jest.fn()
+  })
+
+  it('hides and then shows popover normally', () => {
+    promoteToTopLayer(el)
+    expect(el.hidePopover).toHaveBeenCalled()
+    expect(el.showPopover).toHaveBeenCalled()
+  })
+
+  it('silently catches error when hidePopover throws (e.g. not open)', () => {
+    el.hidePopover.mockImplementation(() => {
+      throw new Error('Not open')
+    })
+    expect(() => promoteToTopLayer(el)).not.toThrow()
+    expect(el.showPopover).toHaveBeenCalled()
+  })
+
+  it('silently catches error when showPopover throws (e.g. disconnected)', () => {
+    el.showPopover.mockImplementation(() => {
+      throw new Error('Disconnected')
+    })
+    expect(() => promoteToTopLayer(el)).not.toThrow()
+    expect(el.hidePopover).toHaveBeenCalled()
   })
 })
