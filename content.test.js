@@ -15,9 +15,21 @@ global.chrome = {
   },
 }
 
+HTMLElement.prototype.showPopover = jest.fn()
+HTMLElement.prototype.hidePopover = jest.fn()
+
+/* jsdom's matches() doesn't support ':popover-open' (unsupported CSS4 pseudo-class);
+   without this, any code path that mocks showPopover into existence (making
+   POPOVER_OK true) throws a SyntaxError the first time it hits that selector. */
+const _origMatches = Element.prototype.matches
+Element.prototype.matches = function (selector) {
+  if (selector === ':popover-open') return false
+  return _origMatches.call(this, selector)
+}
+
 require('./scripts/utils.js')
 require('./panelTemplate.js')
-const { _get, _set, roundRate, clamp, togglePlay, attachVideo, hidePanel } = require('./content')
+const { _get, _set, roundRate, clamp, togglePlay, attachVideo, hidePanel, promoteToTopLayer } = require('./content')
 
 /* content.js renders times via window.formatDuration(s, '–:––') */
 const formatTime = (s) => window.formatDuration(s, '–:––')
@@ -422,5 +434,37 @@ describe('togglePlay', () => {
     togglePlay()
 
     expect(pauseSpy).toHaveBeenCalled()
+  })
+})
+
+describe('promoteToTopLayer', () => {
+  let el
+
+  beforeEach(() => {
+    el = document.createElement('div')
+    el.showPopover = jest.fn()
+    el.hidePopover = jest.fn()
+  })
+
+  it('hides and then shows popover normally', () => {
+    promoteToTopLayer(el)
+    expect(el.hidePopover).toHaveBeenCalled()
+    expect(el.showPopover).toHaveBeenCalled()
+  })
+
+  it('silently catches error when hidePopover throws (e.g. not open)', () => {
+    el.hidePopover.mockImplementation(() => {
+      throw new Error('Not open')
+    })
+    expect(() => promoteToTopLayer(el)).not.toThrow()
+    expect(el.showPopover).toHaveBeenCalled()
+  })
+
+  it('silently catches error when showPopover throws (e.g. disconnected)', () => {
+    el.showPopover.mockImplementation(() => {
+      throw new Error('Disconnected')
+    })
+    expect(() => promoteToTopLayer(el)).not.toThrow()
+    expect(el.hidePopover).toHaveBeenCalled()
   })
 })
