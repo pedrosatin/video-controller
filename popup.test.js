@@ -13,7 +13,7 @@ global.chrome = {
     connect: () => ({
       onMessage: { addListener: () => {} },
       onDisconnect: { addListener: () => {} },
-      postMessage: () => {},
+      postMessage: global.mockPostMessage,
     }),
   },
   storage: {
@@ -32,7 +32,40 @@ document.body.innerHTML = `
 `
 
 require('./scripts/utils.js')
-const { formatDuration, reflectEnabled } = require('./popup.js')
+global.mockPostMessage = jest.fn()
+const { formatDuration, reflectEnabled, createVideoCard, showMessage } = require('./popup.js')
+
+describe('showMessage', () => {
+  let list
+
+  beforeEach(() => {
+    list = document.getElementById('video-list')
+    list.innerHTML = '<div>Old content</div>'
+  })
+
+  it('should clear existing content and append a paragraph with the message', () => {
+    showMessage('No videos found')
+
+    expect(list.children.length).toBe(1)
+
+    const p = list.firstElementChild
+    expect(p.tagName).toBe('P')
+    expect(p.id).toBe('no-videos')
+    expect(p.textContent).toBe('No videos found')
+  })
+
+  it('should safely render special characters preventing XSS', () => {
+    showMessage('<img src="x" onerror="alert(1)">')
+
+    expect(list.children.length).toBe(1)
+
+    const p = list.firstElementChild
+    expect(p.tagName).toBe('P')
+    expect(p.id).toBe('no-videos')
+    expect(p.textContent).toBe('<img src="x" onerror="alert(1)">')
+    expect(p.innerHTML).toBe('&lt;img src="x" onerror="alert(1)"&gt;')
+  })
+})
 
 describe('formatDuration (wrapper)', () => {
   beforeEach(() => {
@@ -79,5 +112,111 @@ describe('reflectEnabled', () => {
     expect(toggle.checked).toBe(false)
     expect(toggleLabel.textContent).toBe('Off')
     expect(document.body.classList.contains('vc-off')).toBe(true)
+  })
+})
+
+describe('createVideoCard', () => {
+  beforeEach(() => {
+    jest.spyOn(window, 'formatDuration').mockImplementation((s) => (s ? `Duration: ${s}` : ''))
+    global.mockPostMessage.mockClear()
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('should create a card with video title if present', () => {
+    const video = { title: 'My Video', src: 'http://example.com/vid.mp4', duration: 120, paused: true }
+    window.formatDuration.mockReturnValue('2:00')
+    const card = createVideoCard(video, 0)
+
+    expect(card.className).toBe('video-card')
+    expect(card.querySelector('.vc-name').textContent).toBe('My Video')
+    expect(card.querySelector('.vc-name').title).toBe('My Video')
+  })
+
+  it('should fall back to src if title is not present', () => {
+    const video = { src: 'http://example.com/vid.mp4', duration: 120, paused: true }
+    window.formatDuration.mockReturnValue('2:00')
+    const card = createVideoCard(video, 0)
+
+    expect(card.querySelector('.vc-name').textContent).toBe('http://example.com/vid.mp4')
+  })
+
+  it('should fall back to Video {i+1} if neither title nor src is present', () => {
+    const video = { duration: 120, paused: true }
+    window.formatDuration.mockReturnValue('2:00')
+    const card = createVideoCard(video, 1) // index 1 -> Video 2
+
+    expect(card.querySelector('.vc-name').textContent).toBe('Video 2')
+  })
+
+  it('should render ⏸ for paused video', () => {
+    const video = { title: 'Vid', paused: true }
+    const card = createVideoCard(video, 0)
+    expect(card.querySelector('.vc-thumb').textContent).toBe('⏸')
+  })
+
+  it('should render ▶ for playing video', () => {
+    const video = { title: 'Vid', paused: false }
+    const card = createVideoCard(video, 0)
+    expect(card.querySelector('.vc-thumb').textContent).toBe('▶')
+  })
+
+  it('should format duration properly', () => {
+    const video = { title: 'Vid', duration: 65, paused: true }
+    window.formatDuration.mockReturnValue('1:05')
+    const card = createVideoCard(video, 0)
+
+    expect(card.querySelector('.vc-meta').textContent).toBe('Duration: 1:05')
+  })
+
+  it('should show "Duration unknown" when duration is falsy', () => {
+    const video = { title: 'Vid', paused: true } // no duration
+    window.formatDuration.mockReturnValue('')
+    const card = createVideoCard(video, 0)
+
+    expect(card.querySelector('.vc-meta').textContent).toBe('Duration unknown')
+  })
+
+  it('should open video when the card is clicked', () => {
+    jest.useFakeTimers()
+    const closeSpy = jest.spyOn(window, 'close').mockImplementation(() => {})
+    const video = { frameToken: 'frame1', id: 'vid1', title: 'Vid', paused: false }
+    const card = createVideoCard(video, 0)
+
+    card.click()
+
+    expect(global.mockPostMessage).toHaveBeenCalledWith({
+      type: 'OPEN_VIDEO',
+      frameToken: 'frame1',
+      id: 'vid1'
+    })
+
+    jest.advanceTimersByTime(80)
+    expect(closeSpy).toHaveBeenCalled()
+
+    jest.useRealTimers()
+  })
+
+  it('should open video when the Control button is clicked', () => {
+    jest.useFakeTimers()
+    const closeSpy = jest.spyOn(window, 'close').mockImplementation(() => {})
+    const video = { frameToken: 'frame2', id: 'vid2', title: 'Vid', paused: false }
+    const card = createVideoCard(video, 0)
+
+    const btn = card.querySelector('.vc-open-btn')
+    btn.click()
+
+    expect(global.mockPostMessage).toHaveBeenCalledWith({
+      type: 'OPEN_VIDEO',
+      frameToken: 'frame2',
+      id: 'vid2'
+    })
+
+    jest.advanceTimersByTime(80)
+    expect(closeSpy).toHaveBeenCalled()
+
+    jest.useRealTimers()
   })
 })
