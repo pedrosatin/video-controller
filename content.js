@@ -1020,6 +1020,6 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { _get, _set, clamp, roundRate }
+    module.exports = { _get, _set, clamp, roundRate, promoteToTopLayer }
   }
 })()
