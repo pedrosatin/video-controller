@@ -33,7 +33,13 @@ document.body.innerHTML = `
 
 require('./scripts/utils.js')
 global.mockPostMessage = jest.fn()
-const { formatDuration, reflectEnabled, createVideoCard, showMessage } = require('./popup.js')
+const {
+  formatDuration,
+  reflectEnabled,
+  createVideoCard,
+  updateVideoCard,
+  showMessage,
+} = require('./popup.js')
 
 describe('showMessage', () => {
   let list
@@ -137,7 +143,12 @@ describe('createVideoCard', () => {
   })
 
   it('should create a card with video title if present', () => {
-    const video = { title: 'My Video', src: 'http://example.com/vid.mp4', duration: 120, paused: true }
+    const video = {
+      title: 'My Video',
+      src: 'http://example.com/vid.mp4',
+      duration: 120,
+      paused: true,
+    }
     window.formatDuration.mockReturnValue('2:00')
     const card = createVideoCard(video, 0)
 
@@ -201,7 +212,7 @@ describe('createVideoCard', () => {
     expect(global.mockPostMessage).toHaveBeenCalledWith({
       type: 'OPEN_VIDEO',
       frameToken: 'frame1',
-      id: 'vid1'
+      id: 'vid1',
     })
 
     jest.advanceTimersByTime(80)
@@ -222,12 +233,108 @@ describe('createVideoCard', () => {
     expect(global.mockPostMessage).toHaveBeenCalledWith({
       type: 'OPEN_VIDEO',
       frameToken: 'frame2',
-      id: 'vid2'
+      id: 'vid2',
     })
 
     jest.advanceTimersByTime(80)
     expect(closeSpy).toHaveBeenCalled()
 
     jest.useRealTimers()
+  })
+})
+
+describe('updateVideoCard', () => {
+  let card
+
+  beforeEach(() => {
+    jest.spyOn(window, 'formatDuration').mockImplementation((s) => (s ? `Duration: ${s}` : ''))
+
+    // Create a mock card structure matching what createVideoCard builds
+    card = document.createElement('div')
+    card.className = 'video-card'
+
+    const thumb = document.createElement('span')
+    thumb.className = 'vc-thumb'
+
+    const info = document.createElement('div')
+    info.className = 'vc-info'
+    const nameEl = document.createElement('div')
+    nameEl.className = 'vc-name'
+    const metaEl = document.createElement('div')
+    metaEl.className = 'vc-meta'
+    info.appendChild(nameEl)
+    info.appendChild(metaEl)
+
+    card.appendChild(thumb)
+    card.appendChild(info)
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('should update card with video title if present', () => {
+    const video = {
+      title: 'Updated Video',
+      src: 'http://example.com/vid.mp4',
+      duration: 120,
+      paused: true,
+    }
+    window.formatDuration.mockReturnValue('2:00')
+    updateVideoCard(card, video, 0)
+
+    expect(card.querySelector('.vc-name').textContent).toBe('Updated Video')
+    expect(card.querySelector('.vc-name').title).toBe('Updated Video')
+  })
+
+  it('should fall back to src if title is not present', () => {
+    const video = { src: 'http://example.com/vid2.mp4', duration: 120, paused: true }
+    window.formatDuration.mockReturnValue('2:00')
+    updateVideoCard(card, video, 0)
+
+    expect(card.querySelector('.vc-name').textContent).toBe('http://example.com/vid2.mp4')
+  })
+
+  it('should fall back to Video {i+1} if neither title nor src is present', () => {
+    const video = { duration: 120, paused: true }
+    window.formatDuration.mockReturnValue('2:00')
+    updateVideoCard(card, video, 1) // index 1 -> Video 2
+
+    expect(card.querySelector('.vc-name').textContent).toBe('Video 2')
+  })
+
+  it('should render ⏸ for paused video', () => {
+    const video = { title: 'Vid', paused: true }
+    updateVideoCard(card, video, 0)
+    expect(card.querySelector('.vc-thumb').textContent).toBe('⏸')
+  })
+
+  it('should render ▶ for playing video', () => {
+    const video = { title: 'Vid', paused: false }
+    updateVideoCard(card, video, 0)
+    expect(card.querySelector('.vc-thumb').textContent).toBe('▶')
+  })
+
+  it('should format duration properly', () => {
+    const video = { title: 'Vid', duration: 65, paused: true }
+    window.formatDuration.mockReturnValue('1:05')
+    updateVideoCard(card, video, 0)
+
+    expect(card.querySelector('.vc-meta').textContent).toBe('Duration: 1:05')
+  })
+
+  it('should show "Duration unknown" when duration is falsy', () => {
+    const video = { title: 'Vid', paused: true } // no duration
+    window.formatDuration.mockReturnValue('')
+    updateVideoCard(card, video, 0)
+
+    expect(card.querySelector('.vc-meta').textContent).toBe('Duration unknown')
+  })
+
+  it('should update the internal _vcVideo reference', () => {
+    const video = { title: 'Vid', duration: 65, paused: true }
+    updateVideoCard(card, video, 0)
+
+    expect(card._vcVideo).toBe(video)
   })
 })
