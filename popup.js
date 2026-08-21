@@ -214,6 +214,15 @@
 
   /* Export for testing */
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { formatDuration, reflectEnabled, createVideoCard, showMessage }
+    module.exports = {
+      formatDuration,
+      reflectEnabled,
+      createVideoCard,
+      showMessage,
+      renderVideos,
+      _setFound: (key, val) => found.set(key, val),
+      _clearFound: () => found.clear(),
+      _getFound: () => found,
+    }
   }
 })()
