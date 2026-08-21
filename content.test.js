@@ -36,6 +36,7 @@ const {
   clamp,
   pointInRect,
   setSpeed,
+  seekTo,
   _setActiveVideo,
   _getUserRate,
   togglePlay,
@@ -556,6 +557,73 @@ describe('setSpeed', () => {
     setSpeed(1.125)
     expect(video.playbackRate).toBe(1.13)
     expect(_getUserRate()).toBe(1.13)
+  })
+})
+
+describe('seekTo', () => {
+  let video
+  let durationSpy
+  let currentTimeSpy
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    durationSpy = jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get')
+
+    // We need to store the requested currentTime to test _set
+    let currentVal = 10
+    currentTimeSpy = jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set').mockImplementation(function(val) {
+      currentVal = val
+    })
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockImplementation(function() {
+      return currentVal
+    })
+
+    _setActiveVideo(video)
+  })
+
+  afterEach(() => {
+    _setActiveVideo(null)
+    jest.restoreAllMocks()
+  })
+
+  it('safely returns if activeVideo is not set', () => {
+    _setActiveVideo(null)
+    expect(() => seekTo(0.5)).not.toThrow()
+  })
+
+  it('safely returns if duration is not finite or <= 0', () => {
+    durationSpy.mockReturnValue(NaN)
+    seekTo(0.5)
+    expect(video.currentTime).toBe(10)
+
+    durationSpy.mockReturnValue(0)
+    seekTo(0.5)
+    expect(video.currentTime).toBe(10)
+
+    durationSpy.mockReturnValue(-5)
+    seekTo(0.5)
+    expect(video.currentTime).toBe(10)
+  })
+
+  it('sets currentTime correctly based on fraction', () => {
+    durationSpy.mockReturnValue(100)
+    seekTo(0.5)
+    expect(video.currentTime).toBe(50)
+
+    seekTo(0.25)
+    expect(video.currentTime).toBe(25)
+  })
+
+  it('clamps currentTime to 0 for negative fractions', () => {
+    durationSpy.mockReturnValue(100)
+    seekTo(-0.1)
+    expect(video.currentTime).toBe(0)
+  })
+
+  it('clamps currentTime to duration for fractions > 1', () => {
+    durationSpy.mockReturnValue(100)
+    seekTo(1.5)
+    expect(video.currentTime).toBe(100)
   })
 })
 
