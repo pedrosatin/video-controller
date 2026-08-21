@@ -36,6 +36,7 @@ const {
   clamp,
   pointInRect,
   setSpeed,
+  changeSpeed,
   _setActiveVideo,
   _getUserRate,
   togglePlay,
@@ -556,6 +557,52 @@ describe('setSpeed', () => {
     setSpeed(1.125)
     expect(video.playbackRate).toBe(1.13)
     expect(_getUserRate()).toBe(1.13)
+  })
+})
+
+
+describe('changeSpeed', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    video.playbackRate = 1
+    _setActiveVideo(video)
+  })
+
+  afterEach(() => {
+    _setActiveVideo(null)
+  })
+
+  it('safely returns if activeVideo is not set', () => {
+    _setActiveVideo(null)
+    const initialRate = _getUserRate()
+    expect(() => changeSpeed(0.5)).not.toThrow()
+    expect(_getUserRate()).toBe(initialRate)
+  })
+
+  it('changes playbackRate correctly for normal values', () => {
+    changeSpeed(0.5)
+    expect(video.playbackRate).toBe(1.5)
+    expect(_getUserRate()).toBe(1.5)
+
+    changeSpeed(-0.25)
+    expect(video.playbackRate).toBe(1.25)
+    expect(_getUserRate()).toBe(1.25)
+  })
+
+  it('clamps the rate to the minimum allowed value (0.1)', () => {
+    video.playbackRate = 0.5
+    changeSpeed(-1.0)
+    expect(video.playbackRate).toBe(0.1)
+    expect(_getUserRate()).toBe(0.1)
+  })
+
+  it('clamps the rate to the maximum allowed value (16)', () => {
+    video.playbackRate = 15.0
+    changeSpeed(2.0)
+    expect(video.playbackRate).toBe(16)
+    expect(_getUserRate()).toBe(16)
   })
 })
 
