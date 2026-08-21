@@ -45,6 +45,7 @@ const {
   videoSummaries,
   scanVideos,
   FRAME_TOKEN,
+  seek,
 } = require('./content')
 
 /* content.js renders times via window.formatDuration(s, '–:––') */
@@ -71,21 +72,31 @@ describe('videoSummaries', () => {
 
   it('maps standard video properties correctly', () => {
     video.title = 'Test Video'
-    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/video.mp4', configurable: true })
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'http://example.com/video.mp4',
+      configurable: true,
+    })
 
     // For properties accessed via _get in content.js, they use HTMLMediaElement.prototype getters if available.
     // In JSDOM, HTMLMediaElement.prototype has getters for some properties, so we should mock the prototype.
     const origDurationDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'duration')
     const origPausedDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'paused')
 
-    Object.defineProperty(HTMLMediaElement.prototype, 'duration', { get: () => 120.5, configurable: true })
-    Object.defineProperty(HTMLMediaElement.prototype, 'paused', { get: () => true, configurable: true })
+    Object.defineProperty(HTMLMediaElement.prototype, 'duration', {
+      get: () => 120.5,
+      configurable: true,
+    })
+    Object.defineProperty(HTMLMediaElement.prototype, 'paused', {
+      get: () => true,
+      configurable: true,
+    })
 
     scanVideos()
     const summaries = videoSummaries()
 
     // Restore prototype
-    if (origDurationDesc) Object.defineProperty(HTMLMediaElement.prototype, 'duration', origDurationDesc)
+    if (origDurationDesc)
+      Object.defineProperty(HTMLMediaElement.prototype, 'duration', origDurationDesc)
     else delete HTMLMediaElement.prototype.duration
 
     if (origPausedDesc) Object.defineProperty(HTMLMediaElement.prototype, 'paused', origPausedDesc)
@@ -97,7 +108,7 @@ describe('videoSummaries', () => {
       src: 'video.mp4',
       title: 'Test Video',
       duration: 120.5,
-      paused: true
+      paused: true,
     })
     expect(summaries[0].id).toBeGreaterThan(0)
   })
@@ -106,7 +117,10 @@ describe('videoSummaries', () => {
     const longTitle = 'A'.repeat(100)
     const longSrcName = 'B'.repeat(100) + '.mp4'
     video.title = longTitle
-    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/' + longSrcName, configurable: true })
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'http://example.com/' + longSrcName,
+      configurable: true,
+    })
 
     scanVideos()
     const summaries = videoSummaries()
@@ -116,7 +130,10 @@ describe('videoSummaries', () => {
   })
 
   it('strips query parameters from src', () => {
-    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/video.mp4?v=123&t=456', configurable: true })
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'http://example.com/video.mp4?v=123&t=456',
+      configurable: true,
+    })
 
     scanVideos()
     const summaries = videoSummaries()
@@ -685,5 +702,60 @@ describe('promoteToTopLayer', () => {
     })
     expect(() => promoteToTopLayer(el)).not.toThrow()
     expect(el.hidePopover).toHaveBeenCalled()
+  })
+})
+
+describe('seek', () => {
+  let video
+  let durationSpy
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    // Set dummy duration
+    durationSpy = jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get').mockReturnValue(100)
+    video.currentTime = 50
+    _setActiveVideo(video)
+  })
+
+  afterEach(() => {
+    _setActiveVideo(null)
+    durationSpy.mockRestore()
+  })
+
+  it('safely returns if activeVideo is not set', () => {
+    _setActiveVideo(null)
+    expect(() => seek(10)).not.toThrow()
+  })
+
+  it('properly updates currentTime forward', () => {
+    seek(10)
+    expect(video.currentTime).toBe(60)
+  })
+
+  it('properly updates currentTime backward', () => {
+    seek(-10)
+    expect(video.currentTime).toBe(40)
+  })
+
+  it('clamps currentTime to 0 when seeking backward past the beginning', () => {
+    seek(-60)
+    expect(video.currentTime).toBe(0)
+  })
+
+  it('clamps currentTime to duration when seeking forward past the end', () => {
+    seek(60)
+    expect(video.currentTime).toBe(100)
+  })
+
+  it('uses Infinity as max boundary if duration is NaN', () => {
+    durationSpy.mockReturnValue(NaN)
+    seek(100)
+    expect(video.currentTime).toBe(150)
+  })
+
+  it('uses Infinity as max boundary if duration is Infinity (live streams)', () => {
+    durationSpy.mockReturnValue(Infinity)
+    seek(100)
+    expect(video.currentTime).toBe(150)
   })
 })
