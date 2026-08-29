@@ -1030,6 +1030,7 @@
         activeVideo = v
       },
       _getUserRate: () => userRate,
+      seek,
       togglePlay,
       setVolume,
       toggleMute,
