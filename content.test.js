@@ -43,6 +43,7 @@ const {
   _getUserRate,
   togglePlay,
   setVolume,
+  togglePiP,
   attachVideo,
   hidePanel,
   promoteToTopLayer,
@@ -836,6 +837,108 @@ describe('togglePlay', () => {
     togglePlay()
 
     expect(pauseSpy).toHaveBeenCalled()
+  })
+})
+
+describe('togglePiP', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+    // Mock requestPictureInPicture on the video instance
+    video.requestPictureInPicture = jest.fn().mockResolvedValue()
+    // Mock document.exitPictureInPicture
+    document.exitPictureInPicture = jest.fn().mockResolvedValue()
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+    hidePanel()
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: null,
+      configurable: true,
+    })
+  })
+
+  it('does nothing if no active video is attached', () => {
+    hidePanel()
+    togglePiP()
+
+    expect(video.requestPictureInPicture).not.toHaveBeenCalled()
+    expect(document.exitPictureInPicture).not.toHaveBeenCalled()
+  })
+
+  it('requests Picture-in-Picture if not currently in PiP mode', () => {
+    attachVideo(video)
+
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: null,
+      configurable: true,
+    })
+
+    togglePiP()
+
+    expect(video.requestPictureInPicture).toHaveBeenCalled()
+    expect(document.exitPictureInPicture).not.toHaveBeenCalled()
+  })
+
+  it('exits Picture-in-Picture if currently in PiP mode', () => {
+    attachVideo(video)
+
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: video,
+      configurable: true,
+    })
+
+    togglePiP()
+
+    expect(document.exitPictureInPicture).toHaveBeenCalled()
+    expect(video.requestPictureInPicture).not.toHaveBeenCalled()
+  })
+
+  it('catches and logs errors when requestPictureInPicture() fails', async () => {
+    attachVideo(video)
+
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: null,
+      configurable: true,
+    })
+
+    const error = new Error('PiP failed')
+    video.requestPictureInPicture.mockRejectedValue(error)
+
+    togglePiP()
+
+    // Give microtask queue time to process the rejection
+    await Promise.resolve()
+
+    expect(console.warn).toHaveBeenCalledWith(
+      '[VideoController] requestPictureInPicture failed:',
+      error,
+    )
+  })
+
+  it('catches and logs errors when exitPictureInPicture() fails', async () => {
+    attachVideo(video)
+
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: video,
+      configurable: true,
+    })
+
+    const error = new Error('Exit PiP failed')
+    document.exitPictureInPicture.mockRejectedValue(error)
+
+    togglePiP()
+
+    // Give microtask queue time to process the rejection
+    await Promise.resolve()
+
+    expect(console.warn).toHaveBeenCalledWith(
+      '[VideoController] exitPictureInPicture failed:',
+      error,
+    )
   })
 })
 
