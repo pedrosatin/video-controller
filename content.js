@@ -1031,6 +1031,7 @@
       },
       _getUserRate: () => userRate,
       seek,
+      togglePiP,
       togglePlay,
       setVolume,
       toggleMute,
