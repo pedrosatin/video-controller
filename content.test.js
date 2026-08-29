@@ -693,6 +693,167 @@ describe('seekTo', () => {
   })
 })
 
+describe('toggleFullscreen', () => {
+  let video
+  let container
+  let originalFullscreenElement
+
+  const { toggleFullscreen, attachVideo, hidePanel } = require('./content')
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    container = document.createElement('div')
+    container.className = 'player-container'
+    container.appendChild(video)
+    document.body.appendChild(container)
+
+    container.requestFullscreen = jest.fn().mockResolvedValue(undefined)
+    video.requestFullscreen = jest.fn().mockResolvedValue(undefined)
+
+    document.exitFullscreen = jest.fn().mockResolvedValue(undefined)
+
+    originalFullscreenElement = Object.getOwnPropertyDescriptor(
+      Document.prototype,
+      'fullscreenElement',
+    )
+
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    document.body.innerHTML = ''
+    jest.restoreAllMocks()
+    hidePanel()
+
+    if (originalFullscreenElement) {
+      Object.defineProperty(Document.prototype, 'fullscreenElement', originalFullscreenElement)
+    } else {
+      delete Document.prototype.fullscreenElement
+    }
+  })
+
+  it('does nothing if no active video', () => {
+    expect(() => toggleFullscreen()).not.toThrow()
+    expect(container.requestFullscreen).not.toHaveBeenCalled()
+    expect(video.requestFullscreen).not.toHaveBeenCalled()
+  })
+
+  it('requests fullscreen on container when not in fullscreen', async () => {
+    attachVideo(video)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => null,
+      configurable: true,
+    })
+
+    toggleFullscreen()
+    await Promise.resolve()
+
+    expect(container.requestFullscreen).toHaveBeenCalled()
+    expect(video.requestFullscreen).not.toHaveBeenCalled()
+  })
+
+  it('falls back to requesting fullscreen on activeVideo if container request fails', async () => {
+    attachVideo(video)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => null,
+      configurable: true,
+    })
+
+    container.requestFullscreen.mockRejectedValue(new Error('Container Fullscreen Error'))
+
+    toggleFullscreen()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(container.requestFullscreen).toHaveBeenCalled()
+    expect(video.requestFullscreen).toHaveBeenCalled()
+    expect(console.warn).toHaveBeenCalledWith(
+      '[VideoController] container.requestFullscreen failed:',
+      expect.any(Error),
+    )
+  })
+
+  it('logs warning if activeVideo requestFullscreen also fails', async () => {
+    attachVideo(video)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => null,
+      configurable: true,
+    })
+
+    container.requestFullscreen.mockRejectedValue(new Error('Container Fullscreen Error'))
+    video.requestFullscreen.mockRejectedValue(new Error('Video Fullscreen Error'))
+
+    toggleFullscreen()
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(container.requestFullscreen).toHaveBeenCalled()
+    expect(video.requestFullscreen).toHaveBeenCalled()
+    expect(console.warn).toHaveBeenCalledWith(
+      '[VideoController] activeVideo.requestFullscreen failed:',
+      expect.any(Error),
+    )
+  })
+
+  it('exits fullscreen if document is already in fullscreen mode', async () => {
+    attachVideo(video)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => document.createElement('div'), // truthy value
+      configurable: true,
+    })
+
+    toggleFullscreen()
+    await Promise.resolve()
+
+    expect(document.exitFullscreen).toHaveBeenCalled()
+    expect(container.requestFullscreen).not.toHaveBeenCalled()
+    expect(video.requestFullscreen).not.toHaveBeenCalled()
+  })
+
+  it('logs warning if exitFullscreen fails', async () => {
+    attachVideo(video)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => document.createElement('div'),
+      configurable: true,
+    })
+
+    document.exitFullscreen.mockRejectedValue(new Error('Exit Fullscreen Error'))
+
+    toggleFullscreen()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(document.exitFullscreen).toHaveBeenCalled()
+    expect(console.warn).toHaveBeenCalledWith(
+      '[VideoController] exitFullscreen failed:',
+      expect.any(Error),
+    )
+  })
+
+  it('requests fullscreen on parentElement if no player container is found', async () => {
+    const parent = document.createElement('div')
+    parent.requestFullscreen = jest.fn().mockResolvedValue(undefined)
+
+    const orphanVideo = document.createElement('video')
+    orphanVideo.requestFullscreen = jest.fn().mockResolvedValue(undefined)
+    parent.appendChild(orphanVideo)
+    document.body.appendChild(parent)
+
+    attachVideo(orphanVideo)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => null,
+      configurable: true,
+    })
+
+    toggleFullscreen()
+    await Promise.resolve()
+
+    expect(parent.requestFullscreen).toHaveBeenCalled()
+    expect(orphanVideo.requestFullscreen).not.toHaveBeenCalled()
+  })
+})
+
 describe('toggleMute', () => {
   let video
   const { toggleMute, attachVideo, applyEnabled, hidePanel } = require('./content')
