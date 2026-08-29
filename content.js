@@ -1026,9 +1026,12 @@
       setSpeed,
       changeSpeed,
       seekTo,
-      _setActiveVideo: (v) => { activeVideo = v },
+      _setActiveVideo: (v) => {
+        activeVideo = v
+      },
       _getUserRate: () => userRate,
       togglePlay,
+      setVolume,
       toggleMute,
       attachVideo,
       hidePanel,
