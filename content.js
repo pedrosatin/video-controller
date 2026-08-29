@@ -510,11 +510,7 @@
     }
     selectorRow.style.display = 'flex'
 
-    let snapshot = ''
-    for (let i = 0; i < videos.length; i++) {
-      if (i > 0) snapshot += ','
-      snapshot += videoIds.get(videos[i])
-    }
+    const snapshot = videos.map((v) => videoIds.get(v)).join(',')
     if (snapshot !== selectorSnapshot) {
       rebuildVideoOptions(videos, snapshot)
     }
@@ -1024,7 +1020,9 @@
       roundRate,
       pointInRect,
       setSpeed,
-      _setActiveVideo: (v) => { activeVideo = v },
+      _setActiveVideo: (v) => {
+        activeVideo = v
+      },
       _getUserRate: () => userRate,
       togglePlay,
       toggleMute,
