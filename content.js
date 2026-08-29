@@ -116,40 +116,50 @@
     return Math.round((r + (Math.sign(r) || 1) * Number.EPSILON) * 100) / 100
   }
 
+  function withActiveVideo(fn) {
+    return function (...args) {
+      if (!activeVideo) return
+      return fn(...args)
+    }
+  }
+
+  function withActiveVideo(fn) {
+    return function (...args) {
+      if (!activeVideo) return
+      return fn(...args)
+    }
+  }
+
   // ══════════════════════════════════════════════════════════════════════════
   // VIDEO ACTIONS  (all go through native prototype accessors)
   // ══════════════════════════════════════════════════════════════════════════
-  function seek(delta) {
-    if (!activeVideo) return
+  const seek = withActiveVideo(function (delta) {
     /* duration is NaN before metadata loads and Infinity for live streams —
        only use it as an upper bound when it is a real number */
     const dur = _get(activeVideo, 'duration')
     const max = isFinite(dur) && dur > 0 ? dur : Infinity
     const cur = _get(activeVideo, 'currentTime') || 0
     _set(activeVideo, 'currentTime', clamp(cur + delta, 0, max))
-  }
+  })
 
-  function seekTo(fraction) {
-    if (!activeVideo) return
+  const seekTo = withActiveVideo(function (fraction) {
     const dur = _get(activeVideo, 'duration')
     if (!isFinite(dur) || dur <= 0) return
     _set(activeVideo, 'currentTime', clamp(fraction * dur, 0, dur))
-  }
+  })
 
-  function changeSpeed(delta) {
-    if (!activeVideo) return
+  const changeSpeed = withActiveVideo(function (delta) {
     const cur = _get(activeVideo, 'playbackRate') || 1
     const next = roundRate(clamp(cur + delta, MIN_RATE, MAX_RATE))
     userRate = next
     _set(activeVideo, 'playbackRate', next)
-  }
+  })
 
-  function setSpeed(rate) {
-    if (!activeVideo) return
+  const setSpeed = withActiveVideo(function (rate) {
     const next = clamp(roundRate(rate), MIN_RATE, MAX_RATE)
     userRate = next
     _set(activeVideo, 'playbackRate', next)
-  }
+  })
 
   /* Some players listen for 'ratechange' and force the rate back. Re-assert
      the user's choice, but give up if the site keeps fighting within the same
@@ -171,28 +181,24 @@
     _set(activeVideo, 'playbackRate', userRate)
   }
 
-  function togglePlay() {
-    if (!activeVideo) return
+  const togglePlay = withActiveVideo(function () {
     if (_get(activeVideo, 'paused')) {
       activeVideo.play().catch((err) => console.warn('[VideoController] play failed:', err))
     } else {
       activeVideo.pause()
     }
-  }
+  })
 
-  function setVolume(v) {
-    if (!activeVideo) return
+  const setVolume = withActiveVideo(function (v) {
     _set(activeVideo, 'volume', clamp(v, 0, 1))
     if (v > 0) _set(activeVideo, 'muted', false)
-  }
+  })
 
-  function toggleMute() {
-    if (!activeVideo) return
+  const toggleMute = withActiveVideo(function () {
     _set(activeVideo, 'muted', !_get(activeVideo, 'muted'))
-  }
+  })
 
-  function toggleFullscreen() {
-    if (!activeVideo) return
+  const toggleFullscreen = withActiveVideo(function () {
     /* Try the closest player container first, then the video itself */
     const container = activeVideo.closest('[class*="player" i]') || activeVideo.parentElement
     if (!document.fullscreenElement) {
@@ -207,10 +213,9 @@
         .exitFullscreen()
         .catch((err) => console.warn('[VideoController] exitFullscreen failed:', err))
     }
-  }
+  })
 
-  function togglePiP() {
-    if (!activeVideo) return
+  const togglePiP = withActiveVideo(function () {
     if (document.pictureInPictureElement) {
       document
         .exitPictureInPicture()
@@ -220,12 +225,11 @@
         .requestPictureInPicture()
         .catch((err) => console.warn('[VideoController] requestPictureInPicture failed:', err))
     }
-  }
+  })
 
-  function toggleLoop() {
-    if (!activeVideo) return
+  const toggleLoop = withActiveVideo(function () {
     _set(activeVideo, 'loop', !_get(activeVideo, 'loop'))
-  }
+  })
 
   // ══════════════════════════════════════════════════════════════════════════
   // BUILD THE PANEL DOM
@@ -365,15 +369,13 @@
   // ══════════════════════════════════════════════════════════════════════════
   // UI UPDATE FUNCTIONS
   // ══════════════════════════════════════════════════════════════════════════
-  function updatePlayBtn() {
-    if (!activeVideo) return
+  const updatePlayBtn = withActiveVideo(function () {
     const paused = _get(activeVideo, 'paused')
     playBtn.textContent = paused ? '▶' : '⏸'
     playBtn.title = paused ? 'Play (Space)' : 'Pause (Space)'
-  }
+  })
 
-  function updateProgress() {
-    if (!activeVideo) return
+  const updateProgress = withActiveVideo(function () {
     const cur = _get(activeVideo, 'currentTime') || 0
     const dur = _get(activeVideo, 'duration') || 0
     /* don't fight the user's thumb while they are dragging the slider */
@@ -381,33 +383,30 @@
       progressBar.value = (cur / dur) * 1000
     }
     timeDisp.textContent = `${window.formatDuration(cur, '–:––')} / ${window.formatDuration(dur, '–:––')}`
-  }
+  })
 
-  function updateSpeedUI() {
-    if (!activeVideo) return
+  const updateSpeedUI = withActiveVideo(function () {
     const r = _get(activeVideo, 'playbackRate') || 1
     speedBadge.textContent = `${r.toFixed(2)}×`
     presetBtns.forEach((btn) => {
       btn.classList.toggle('vc-preset-active', parseFloat(btn.dataset.speed) === r)
     })
-  }
+  })
 
-  function updateVolumeUI() {
-    if (!activeVideo) return
+  const updateVolumeUI = withActiveVideo(function () {
     const muted = _get(activeVideo, 'muted')
     const vol = _get(activeVideo, 'volume') ?? 1
     const eff = muted ? 0 : vol
     muteBtn.textContent = eff === 0 ? '🔇' : eff < 0.5 ? '🔉' : '🔊'
     volSlider.value = eff
     volDisp.textContent = `${Math.round(eff * 100)}%`
-  }
+  })
 
-  function updateLoopBtn() {
-    if (!activeVideo) return
+  const updateLoopBtn = withActiveVideo(function () {
     const looping = _get(activeVideo, 'loop')
     loopBtn.classList.toggle('vc-btn-active', looping)
     loopBtn.title = `Loop: ${looping ? 'ON' : 'OFF'} (L)`
-  }
+  })
 
   function updateFullscreenBtn() {
     const fsBtn = q('#vc-fullscreen-btn')
@@ -531,13 +530,12 @@
   // ══════════════════════════════════════════════════════════════════════════
   // ATTACH / DETACH A VIDEO
   // ══════════════════════════════════════════════════════════════════════════
-  function detachListeners() {
-    if (!activeVideo) return
+  const detachListeners = withActiveVideo(function () {
     for (const [type, fn] of videoEventListeners) {
       activeVideo.removeEventListener(type, fn)
     }
     videoEventListeners = []
-  }
+  })
 
   function attachVideo(video) {
     if (!vcEnabled) return
@@ -1024,7 +1022,9 @@
       roundRate,
       pointInRect,
       setSpeed,
-      _setActiveVideo: (v) => { activeVideo = v },
+      _setActiveVideo: (v) => {
+        activeVideo = v
+      },
       _getUserRate: () => userRate,
       togglePlay,
       toggleMute,
