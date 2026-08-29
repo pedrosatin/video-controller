@@ -214,6 +214,15 @@
 
   /* Export for testing */
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { formatDuration, reflectEnabled, createVideoCard, showMessage }
+    module.exports = {
+      formatDuration,
+      reflectEnabled,
+      createVideoCard,
+      showMessage,
+      openVideo,
+      _setPort: (p) => {
+        port = p
+      },
+    }
   }
 })()
