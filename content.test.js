@@ -71,21 +71,31 @@ describe('videoSummaries', () => {
 
   it('maps standard video properties correctly', () => {
     video.title = 'Test Video'
-    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/video.mp4', configurable: true })
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'http://example.com/video.mp4',
+      configurable: true,
+    })
 
     // For properties accessed via _get in content.js, they use HTMLMediaElement.prototype getters if available.
     // In JSDOM, HTMLMediaElement.prototype has getters for some properties, so we should mock the prototype.
     const origDurationDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'duration')
     const origPausedDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'paused')
 
-    Object.defineProperty(HTMLMediaElement.prototype, 'duration', { get: () => 120.5, configurable: true })
-    Object.defineProperty(HTMLMediaElement.prototype, 'paused', { get: () => true, configurable: true })
+    Object.defineProperty(HTMLMediaElement.prototype, 'duration', {
+      get: () => 120.5,
+      configurable: true,
+    })
+    Object.defineProperty(HTMLMediaElement.prototype, 'paused', {
+      get: () => true,
+      configurable: true,
+    })
 
     scanVideos()
     const summaries = videoSummaries()
 
     // Restore prototype
-    if (origDurationDesc) Object.defineProperty(HTMLMediaElement.prototype, 'duration', origDurationDesc)
+    if (origDurationDesc)
+      Object.defineProperty(HTMLMediaElement.prototype, 'duration', origDurationDesc)
     else delete HTMLMediaElement.prototype.duration
 
     if (origPausedDesc) Object.defineProperty(HTMLMediaElement.prototype, 'paused', origPausedDesc)
@@ -97,7 +107,7 @@ describe('videoSummaries', () => {
       src: 'video.mp4',
       title: 'Test Video',
       duration: 120.5,
-      paused: true
+      paused: true,
     })
     expect(summaries[0].id).toBeGreaterThan(0)
   })
@@ -106,7 +116,10 @@ describe('videoSummaries', () => {
     const longTitle = 'A'.repeat(100)
     const longSrcName = 'B'.repeat(100) + '.mp4'
     video.title = longTitle
-    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/' + longSrcName, configurable: true })
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'http://example.com/' + longSrcName,
+      configurable: true,
+    })
 
     scanVideos()
     const summaries = videoSummaries()
@@ -116,7 +129,10 @@ describe('videoSummaries', () => {
   })
 
   it('strips query parameters from src', () => {
-    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/video.mp4?v=123&t=456', configurable: true })
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'http://example.com/video.mp4?v=123&t=456',
+      configurable: true,
+    })
 
     scanVideos()
     const summaries = videoSummaries()
@@ -556,6 +572,167 @@ describe('setSpeed', () => {
     setSpeed(1.125)
     expect(video.playbackRate).toBe(1.13)
     expect(_getUserRate()).toBe(1.13)
+  })
+})
+
+describe('toggleFullscreen', () => {
+  let video
+  let container
+  let originalFullscreenElement
+
+  const { toggleFullscreen, attachVideo, hidePanel } = require('./content')
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    container = document.createElement('div')
+    container.className = 'player-container'
+    container.appendChild(video)
+    document.body.appendChild(container)
+
+    container.requestFullscreen = jest.fn().mockResolvedValue(undefined)
+    video.requestFullscreen = jest.fn().mockResolvedValue(undefined)
+
+    document.exitFullscreen = jest.fn().mockResolvedValue(undefined)
+
+    originalFullscreenElement = Object.getOwnPropertyDescriptor(
+      Document.prototype,
+      'fullscreenElement',
+    )
+
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    document.body.innerHTML = ''
+    jest.restoreAllMocks()
+    hidePanel()
+
+    if (originalFullscreenElement) {
+      Object.defineProperty(Document.prototype, 'fullscreenElement', originalFullscreenElement)
+    } else {
+      delete Document.prototype.fullscreenElement
+    }
+  })
+
+  it('does nothing if no active video', () => {
+    expect(() => toggleFullscreen()).not.toThrow()
+    expect(container.requestFullscreen).not.toHaveBeenCalled()
+    expect(video.requestFullscreen).not.toHaveBeenCalled()
+  })
+
+  it('requests fullscreen on container when not in fullscreen', async () => {
+    attachVideo(video)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => null,
+      configurable: true,
+    })
+
+    toggleFullscreen()
+    await Promise.resolve()
+
+    expect(container.requestFullscreen).toHaveBeenCalled()
+    expect(video.requestFullscreen).not.toHaveBeenCalled()
+  })
+
+  it('falls back to requesting fullscreen on activeVideo if container request fails', async () => {
+    attachVideo(video)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => null,
+      configurable: true,
+    })
+
+    container.requestFullscreen.mockRejectedValue(new Error('Container Fullscreen Error'))
+
+    toggleFullscreen()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(container.requestFullscreen).toHaveBeenCalled()
+    expect(video.requestFullscreen).toHaveBeenCalled()
+    expect(console.warn).toHaveBeenCalledWith(
+      '[VideoController] container.requestFullscreen failed:',
+      expect.any(Error),
+    )
+  })
+
+  it('logs warning if activeVideo requestFullscreen also fails', async () => {
+    attachVideo(video)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => null,
+      configurable: true,
+    })
+
+    container.requestFullscreen.mockRejectedValue(new Error('Container Fullscreen Error'))
+    video.requestFullscreen.mockRejectedValue(new Error('Video Fullscreen Error'))
+
+    toggleFullscreen()
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(container.requestFullscreen).toHaveBeenCalled()
+    expect(video.requestFullscreen).toHaveBeenCalled()
+    expect(console.warn).toHaveBeenCalledWith(
+      '[VideoController] activeVideo.requestFullscreen failed:',
+      expect.any(Error),
+    )
+  })
+
+  it('exits fullscreen if document is already in fullscreen mode', async () => {
+    attachVideo(video)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => document.createElement('div'), // truthy value
+      configurable: true,
+    })
+
+    toggleFullscreen()
+    await Promise.resolve()
+
+    expect(document.exitFullscreen).toHaveBeenCalled()
+    expect(container.requestFullscreen).not.toHaveBeenCalled()
+    expect(video.requestFullscreen).not.toHaveBeenCalled()
+  })
+
+  it('logs warning if exitFullscreen fails', async () => {
+    attachVideo(video)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => document.createElement('div'),
+      configurable: true,
+    })
+
+    document.exitFullscreen.mockRejectedValue(new Error('Exit Fullscreen Error'))
+
+    toggleFullscreen()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(document.exitFullscreen).toHaveBeenCalled()
+    expect(console.warn).toHaveBeenCalledWith(
+      '[VideoController] exitFullscreen failed:',
+      expect.any(Error),
+    )
+  })
+
+  it('requests fullscreen on parentElement if no player container is found', async () => {
+    const parent = document.createElement('div')
+    parent.requestFullscreen = jest.fn().mockResolvedValue(undefined)
+
+    const orphanVideo = document.createElement('video')
+    orphanVideo.requestFullscreen = jest.fn().mockResolvedValue(undefined)
+    parent.appendChild(orphanVideo)
+    document.body.appendChild(parent)
+
+    attachVideo(orphanVideo)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => null,
+      configurable: true,
+    })
+
+    toggleFullscreen()
+    await Promise.resolve()
+
+    expect(parent.requestFullscreen).toHaveBeenCalled()
+    expect(orphanVideo.requestFullscreen).not.toHaveBeenCalled()
   })
 })
 

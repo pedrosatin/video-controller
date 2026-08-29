@@ -1024,10 +1024,13 @@
       roundRate,
       pointInRect,
       setSpeed,
-      _setActiveVideo: (v) => { activeVideo = v },
+      _setActiveVideo: (v) => {
+        activeVideo = v
+      },
       _getUserRate: () => userRate,
       togglePlay,
       toggleMute,
+      toggleFullscreen,
       attachVideo,
       hidePanel,
       applyEnabled,
