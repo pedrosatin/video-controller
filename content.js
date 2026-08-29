@@ -1035,6 +1035,7 @@
       togglePlay,
       setVolume,
       toggleMute,
+      toggleFullscreen,
       attachVideo,
       hidePanel,
       applyEnabled,
