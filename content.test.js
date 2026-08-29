@@ -39,6 +39,7 @@ const {
   _setActiveVideo,
   _getUserRate,
   togglePlay,
+  togglePiP,
   attachVideo,
   hidePanel,
   promoteToTopLayer,
@@ -71,21 +72,31 @@ describe('videoSummaries', () => {
 
   it('maps standard video properties correctly', () => {
     video.title = 'Test Video'
-    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/video.mp4', configurable: true })
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'http://example.com/video.mp4',
+      configurable: true,
+    })
 
     // For properties accessed via _get in content.js, they use HTMLMediaElement.prototype getters if available.
     // In JSDOM, HTMLMediaElement.prototype has getters for some properties, so we should mock the prototype.
     const origDurationDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'duration')
     const origPausedDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'paused')
 
-    Object.defineProperty(HTMLMediaElement.prototype, 'duration', { get: () => 120.5, configurable: true })
-    Object.defineProperty(HTMLMediaElement.prototype, 'paused', { get: () => true, configurable: true })
+    Object.defineProperty(HTMLMediaElement.prototype, 'duration', {
+      get: () => 120.5,
+      configurable: true,
+    })
+    Object.defineProperty(HTMLMediaElement.prototype, 'paused', {
+      get: () => true,
+      configurable: true,
+    })
 
     scanVideos()
     const summaries = videoSummaries()
 
     // Restore prototype
-    if (origDurationDesc) Object.defineProperty(HTMLMediaElement.prototype, 'duration', origDurationDesc)
+    if (origDurationDesc)
+      Object.defineProperty(HTMLMediaElement.prototype, 'duration', origDurationDesc)
     else delete HTMLMediaElement.prototype.duration
 
     if (origPausedDesc) Object.defineProperty(HTMLMediaElement.prototype, 'paused', origPausedDesc)
@@ -97,7 +108,7 @@ describe('videoSummaries', () => {
       src: 'video.mp4',
       title: 'Test Video',
       duration: 120.5,
-      paused: true
+      paused: true,
     })
     expect(summaries[0].id).toBeGreaterThan(0)
   })
@@ -106,7 +117,10 @@ describe('videoSummaries', () => {
     const longTitle = 'A'.repeat(100)
     const longSrcName = 'B'.repeat(100) + '.mp4'
     video.title = longTitle
-    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/' + longSrcName, configurable: true })
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'http://example.com/' + longSrcName,
+      configurable: true,
+    })
 
     scanVideos()
     const summaries = videoSummaries()
@@ -116,7 +130,10 @@ describe('videoSummaries', () => {
   })
 
   it('strips query parameters from src', () => {
-    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/video.mp4?v=123&t=456', configurable: true })
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'http://example.com/video.mp4?v=123&t=456',
+      configurable: true,
+    })
 
     scanVideos()
     const summaries = videoSummaries()
@@ -653,6 +670,108 @@ describe('togglePlay', () => {
     togglePlay()
 
     expect(pauseSpy).toHaveBeenCalled()
+  })
+})
+
+describe('togglePiP', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+    // Mock requestPictureInPicture on the video instance
+    video.requestPictureInPicture = jest.fn().mockResolvedValue()
+    // Mock document.exitPictureInPicture
+    document.exitPictureInPicture = jest.fn().mockResolvedValue()
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+    hidePanel()
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: null,
+      configurable: true,
+    })
+  })
+
+  it('does nothing if no active video is attached', () => {
+    hidePanel()
+    togglePiP()
+
+    expect(video.requestPictureInPicture).not.toHaveBeenCalled()
+    expect(document.exitPictureInPicture).not.toHaveBeenCalled()
+  })
+
+  it('requests Picture-in-Picture if not currently in PiP mode', () => {
+    attachVideo(video)
+
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: null,
+      configurable: true,
+    })
+
+    togglePiP()
+
+    expect(video.requestPictureInPicture).toHaveBeenCalled()
+    expect(document.exitPictureInPicture).not.toHaveBeenCalled()
+  })
+
+  it('exits Picture-in-Picture if currently in PiP mode', () => {
+    attachVideo(video)
+
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: video,
+      configurable: true,
+    })
+
+    togglePiP()
+
+    expect(document.exitPictureInPicture).toHaveBeenCalled()
+    expect(video.requestPictureInPicture).not.toHaveBeenCalled()
+  })
+
+  it('catches and logs errors when requestPictureInPicture() fails', async () => {
+    attachVideo(video)
+
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: null,
+      configurable: true,
+    })
+
+    const error = new Error('PiP failed')
+    video.requestPictureInPicture.mockRejectedValue(error)
+
+    togglePiP()
+
+    // Give microtask queue time to process the rejection
+    await Promise.resolve()
+
+    expect(console.warn).toHaveBeenCalledWith(
+      '[VideoController] requestPictureInPicture failed:',
+      error,
+    )
+  })
+
+  it('catches and logs errors when exitPictureInPicture() fails', async () => {
+    attachVideo(video)
+
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: video,
+      configurable: true,
+    })
+
+    const error = new Error('Exit PiP failed')
+    document.exitPictureInPicture.mockRejectedValue(error)
+
+    togglePiP()
+
+    // Give microtask queue time to process the rejection
+    await Promise.resolve()
+
+    expect(console.warn).toHaveBeenCalledWith(
+      '[VideoController] exitPictureInPicture failed:',
+      error,
+    )
   })
 })
 
