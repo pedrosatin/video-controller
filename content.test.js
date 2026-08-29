@@ -36,6 +36,7 @@ const {
   clamp,
   pointInRect,
   setSpeed,
+  seek,
   _setActiveVideo,
   _getUserRate,
   togglePlay,
@@ -71,21 +72,31 @@ describe('videoSummaries', () => {
 
   it('maps standard video properties correctly', () => {
     video.title = 'Test Video'
-    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/video.mp4', configurable: true })
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'http://example.com/video.mp4',
+      configurable: true,
+    })
 
     // For properties accessed via _get in content.js, they use HTMLMediaElement.prototype getters if available.
     // In JSDOM, HTMLMediaElement.prototype has getters for some properties, so we should mock the prototype.
     const origDurationDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'duration')
     const origPausedDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'paused')
 
-    Object.defineProperty(HTMLMediaElement.prototype, 'duration', { get: () => 120.5, configurable: true })
-    Object.defineProperty(HTMLMediaElement.prototype, 'paused', { get: () => true, configurable: true })
+    Object.defineProperty(HTMLMediaElement.prototype, 'duration', {
+      get: () => 120.5,
+      configurable: true,
+    })
+    Object.defineProperty(HTMLMediaElement.prototype, 'paused', {
+      get: () => true,
+      configurable: true,
+    })
 
     scanVideos()
     const summaries = videoSummaries()
 
     // Restore prototype
-    if (origDurationDesc) Object.defineProperty(HTMLMediaElement.prototype, 'duration', origDurationDesc)
+    if (origDurationDesc)
+      Object.defineProperty(HTMLMediaElement.prototype, 'duration', origDurationDesc)
     else delete HTMLMediaElement.prototype.duration
 
     if (origPausedDesc) Object.defineProperty(HTMLMediaElement.prototype, 'paused', origPausedDesc)
@@ -97,7 +108,7 @@ describe('videoSummaries', () => {
       src: 'video.mp4',
       title: 'Test Video',
       duration: 120.5,
-      paused: true
+      paused: true,
     })
     expect(summaries[0].id).toBeGreaterThan(0)
   })
@@ -106,7 +117,10 @@ describe('videoSummaries', () => {
     const longTitle = 'A'.repeat(100)
     const longSrcName = 'B'.repeat(100) + '.mp4'
     video.title = longTitle
-    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/' + longSrcName, configurable: true })
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'http://example.com/' + longSrcName,
+      configurable: true,
+    })
 
     scanVideos()
     const summaries = videoSummaries()
@@ -116,7 +130,10 @@ describe('videoSummaries', () => {
   })
 
   it('strips query parameters from src', () => {
-    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/video.mp4?v=123&t=456', configurable: true })
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'http://example.com/video.mp4?v=123&t=456',
+      configurable: true,
+    })
 
     scanVideos()
     const summaries = videoSummaries()
@@ -685,5 +702,94 @@ describe('promoteToTopLayer', () => {
     })
     expect(() => promoteToTopLayer(el)).not.toThrow()
     expect(el.hidePopover).toHaveBeenCalled()
+  })
+})
+
+describe('seek', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    _setActiveVideo(video)
+  })
+
+  afterEach(() => {
+    _setActiveVideo(null)
+    jest.restoreAllMocks()
+  })
+
+  it('safely returns if activeVideo is not set', () => {
+    _setActiveVideo(null)
+    expect(() => seek(10)).not.toThrow()
+  })
+
+  it('adds positive delta to currentTime', () => {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockReturnValue(10)
+    jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get').mockReturnValue(100)
+    const setTimeSpy = jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set')
+
+    seek(5)
+
+    expect(setTimeSpy).toHaveBeenCalledWith(15)
+  })
+
+  it('adds negative delta to currentTime', () => {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockReturnValue(20)
+    jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get').mockReturnValue(100)
+    const setTimeSpy = jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set')
+
+    seek(-5)
+
+    expect(setTimeSpy).toHaveBeenCalledWith(15)
+  })
+
+  it('clamps currentTime to 0 when seeking backwards past the beginning', () => {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockReturnValue(3)
+    jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get').mockReturnValue(100)
+    const setTimeSpy = jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set')
+
+    seek(-5)
+
+    expect(setTimeSpy).toHaveBeenCalledWith(0)
+  })
+
+  it('clamps currentTime to duration when seeking forwards past the end', () => {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockReturnValue(90)
+    jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get').mockReturnValue(100)
+    const setTimeSpy = jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set')
+
+    seek(15)
+
+    expect(setTimeSpy).toHaveBeenCalledWith(100)
+  })
+
+  it('allows seeking without an upper limit if duration is NaN', () => {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockReturnValue(90)
+    jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get').mockReturnValue(NaN)
+    const setTimeSpy = jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set')
+
+    seek(15)
+
+    expect(setTimeSpy).toHaveBeenCalledWith(105)
+  })
+
+  it('allows seeking without an upper limit if duration is Infinity', () => {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockReturnValue(90)
+    jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get').mockReturnValue(Infinity)
+    const setTimeSpy = jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set')
+
+    seek(15)
+
+    expect(setTimeSpy).toHaveBeenCalledWith(105)
+  })
+
+  it('allows seeking without an upper limit if duration is <= 0', () => {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockReturnValue(90)
+    jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get').mockReturnValue(0)
+    const setTimeSpy = jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set')
+
+    seek(15)
+
+    expect(setTimeSpy).toHaveBeenCalledWith(105)
   })
 })
