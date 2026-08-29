@@ -33,7 +33,13 @@ document.body.innerHTML = `
 
 require('./scripts/utils.js')
 global.mockPostMessage = jest.fn()
-const { formatDuration, reflectEnabled, createVideoCard, showMessage } = require('./popup.js')
+const {
+  formatDuration,
+  reflectEnabled,
+  createVideoCard,
+  updateVideoCard,
+  showMessage,
+} = require('./popup.js')
 
 describe('showMessage', () => {
   let list
@@ -137,7 +143,12 @@ describe('createVideoCard', () => {
   })
 
   it('should create a card with video title if present', () => {
-    const video = { title: 'My Video', src: 'http://example.com/vid.mp4', duration: 120, paused: true }
+    const video = {
+      title: 'My Video',
+      src: 'http://example.com/vid.mp4',
+      duration: 120,
+      paused: true,
+    }
     window.formatDuration.mockReturnValue('2:00')
     const card = createVideoCard(video, 0)
 
@@ -201,7 +212,7 @@ describe('createVideoCard', () => {
     expect(global.mockPostMessage).toHaveBeenCalledWith({
       type: 'OPEN_VIDEO',
       frameToken: 'frame1',
-      id: 'vid1'
+      id: 'vid1',
     })
 
     jest.advanceTimersByTime(80)
@@ -222,12 +233,60 @@ describe('createVideoCard', () => {
     expect(global.mockPostMessage).toHaveBeenCalledWith({
       type: 'OPEN_VIDEO',
       frameToken: 'frame2',
-      id: 'vid2'
+      id: 'vid2',
     })
 
     jest.advanceTimersByTime(80)
     expect(closeSpy).toHaveBeenCalled()
 
     jest.useRealTimers()
+  })
+})
+
+describe('updateVideoCard', () => {
+  let card
+  beforeEach(() => {
+    jest.spyOn(window, 'formatDuration').mockImplementation((s) => (s ? `Duration: ${s}` : ''))
+
+    // Create a dummy card structure similar to what createVideoCard outputs
+    card = document.createElement('div')
+    const thumb = document.createElement('span')
+    const info = document.createElement('div')
+    const nameEl = document.createElement('div')
+    const metaEl = document.createElement('div')
+    info.appendChild(nameEl)
+    info.appendChild(metaEl)
+    card.appendChild(thumb)
+    card.appendChild(info)
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('should update video title, state, and duration', () => {
+    const video = { title: 'New Video', duration: 200, paused: false }
+    window.formatDuration.mockReturnValue('3:20')
+
+    updateVideoCard(card, video, 1)
+
+    expect(card.children[0].textContent).toBe('▶')
+    const info = card.children[1]
+    expect(info.children[0].textContent).toBe('New Video')
+    expect(info.children[0].title).toBe('New Video')
+    expect(info.children[1].textContent).toBe('Duration: 3:20')
+    expect(card._vcVideo).toBe(video)
+  })
+
+  it('should update to fallback title and paused state', () => {
+    const video = { duration: 0, paused: true }
+    window.formatDuration.mockReturnValue('')
+
+    updateVideoCard(card, video, 2)
+
+    expect(card.children[0].textContent).toBe('⏸')
+    const info = card.children[1]
+    expect(info.children[0].textContent).toBe('Video 3')
+    expect(info.children[1].textContent).toBe('Duration unknown')
   })
 })
