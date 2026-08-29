@@ -41,6 +41,7 @@ const {
   _setActiveVideo,
   _getUserRate,
   togglePlay,
+  setVolume,
   attachVideo,
   hidePanel,
   promoteToTopLayer,
@@ -73,21 +74,31 @@ describe('videoSummaries', () => {
 
   it('maps standard video properties correctly', () => {
     video.title = 'Test Video'
-    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/video.mp4', configurable: true })
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'http://example.com/video.mp4',
+      configurable: true,
+    })
 
     // For properties accessed via _get in content.js, they use HTMLMediaElement.prototype getters if available.
     // In JSDOM, HTMLMediaElement.prototype has getters for some properties, so we should mock the prototype.
     const origDurationDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'duration')
     const origPausedDesc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'paused')
 
-    Object.defineProperty(HTMLMediaElement.prototype, 'duration', { get: () => 120.5, configurable: true })
-    Object.defineProperty(HTMLMediaElement.prototype, 'paused', { get: () => true, configurable: true })
+    Object.defineProperty(HTMLMediaElement.prototype, 'duration', {
+      get: () => 120.5,
+      configurable: true,
+    })
+    Object.defineProperty(HTMLMediaElement.prototype, 'paused', {
+      get: () => true,
+      configurable: true,
+    })
 
     scanVideos()
     const summaries = videoSummaries()
 
     // Restore prototype
-    if (origDurationDesc) Object.defineProperty(HTMLMediaElement.prototype, 'duration', origDurationDesc)
+    if (origDurationDesc)
+      Object.defineProperty(HTMLMediaElement.prototype, 'duration', origDurationDesc)
     else delete HTMLMediaElement.prototype.duration
 
     if (origPausedDesc) Object.defineProperty(HTMLMediaElement.prototype, 'paused', origPausedDesc)
@@ -99,7 +110,7 @@ describe('videoSummaries', () => {
       src: 'video.mp4',
       title: 'Test Video',
       duration: 120.5,
-      paused: true
+      paused: true,
     })
     expect(summaries[0].id).toBeGreaterThan(0)
   })
@@ -108,7 +119,10 @@ describe('videoSummaries', () => {
     const longTitle = 'A'.repeat(100)
     const longSrcName = 'B'.repeat(100) + '.mp4'
     video.title = longTitle
-    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/' + longSrcName, configurable: true })
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'http://example.com/' + longSrcName,
+      configurable: true,
+    })
 
     scanVideos()
     const summaries = videoSummaries()
@@ -118,7 +132,10 @@ describe('videoSummaries', () => {
   })
 
   it('strips query parameters from src', () => {
-    Object.defineProperty(video, 'currentSrc', { value: 'http://example.com/video.mp4?v=123&t=456', configurable: true })
+    Object.defineProperty(video, 'currentSrc', {
+      value: 'http://example.com/video.mp4?v=123&t=456',
+      configurable: true,
+    })
 
     scanVideos()
     const summaries = videoSummaries()
@@ -701,6 +718,56 @@ describe('toggleMute', () => {
     hidePanel() // Unsets activeVideo
     // Make sure toggleMute doesn't throw when activeVideo is null
     expect(() => toggleMute()).not.toThrow()
+  })
+})
+
+describe('setVolume', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    document.body.appendChild(video)
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+    hidePanel()
+    video.remove()
+  })
+
+  it('does nothing if no active video is attached', () => {
+    hidePanel()
+    setVolume(0.5)
+    expect(video.volume).toBe(1) // Default volume is 1
+  })
+
+  it('sets volume on active video within clamped bounds (0 to 1)', () => {
+    attachVideo(video)
+
+    setVolume(0.5)
+    expect(video.volume).toBe(0.5)
+
+    setVolume(1.5)
+    expect(video.volume).toBe(1) // Clamped to 1
+
+    setVolume(-0.5)
+    expect(video.volume).toBe(0) // Clamped to 0
+  })
+
+  it('un-mutes the video if volume > 0', () => {
+    video.muted = true
+    attachVideo(video)
+
+    setVolume(0.5)
+    expect(video.muted).toBe(false)
+  })
+
+  it('does not un-mute the video if volume is 0', () => {
+    video.muted = true
+    attachVideo(video)
+
+    setVolume(0)
+    expect(video.muted).toBe(true)
   })
 })
 
