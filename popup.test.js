@@ -137,7 +137,12 @@ describe('createVideoCard', () => {
   })
 
   it('should create a card with video title if present', () => {
-    const video = { title: 'My Video', src: 'http://example.com/vid.mp4', duration: 120, paused: true }
+    const video = {
+      title: 'My Video',
+      src: 'http://example.com/vid.mp4',
+      duration: 120,
+      paused: true,
+    }
     window.formatDuration.mockReturnValue('2:00')
     const card = createVideoCard(video, 0)
 
@@ -201,7 +206,7 @@ describe('createVideoCard', () => {
     expect(global.mockPostMessage).toHaveBeenCalledWith({
       type: 'OPEN_VIDEO',
       frameToken: 'frame1',
-      id: 'vid1'
+      id: 'vid1',
     })
 
     jest.advanceTimersByTime(80)
@@ -222,7 +227,7 @@ describe('createVideoCard', () => {
     expect(global.mockPostMessage).toHaveBeenCalledWith({
       type: 'OPEN_VIDEO',
       frameToken: 'frame2',
-      id: 'vid2'
+      id: 'vid2',
     })
 
     jest.advanceTimersByTime(80)
