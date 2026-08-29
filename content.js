@@ -1025,6 +1025,7 @@
       pointInRect,
       setSpeed,
       changeSpeed,
+      seekTo,
       _setActiveVideo: (v) => { activeVideo = v },
       _getUserRate: () => userRate,
       togglePlay,
