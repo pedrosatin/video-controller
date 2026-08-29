@@ -33,7 +33,7 @@ document.body.innerHTML = `
 
 require('./scripts/utils.js')
 global.mockPostMessage = jest.fn()
-const { formatDuration, reflectEnabled, createVideoCard, showMessage } = require('./popup.js')
+const { formatDuration, reflectEnabled, createVideoCard, showMessage, openVideo, _setPort } = require('./popup.js')
 
 describe('showMessage', () => {
   let list
@@ -234,5 +234,53 @@ describe('createVideoCard', () => {
     expect(closeSpy).toHaveBeenCalled()
 
     jest.useRealTimers()
+  })
+})
+
+describe('openVideo', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+    jest.spyOn(window, 'close').mockImplementation(() => {})
+    global.mockPostMessage.mockClear()
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+    jest.restoreAllMocks()
+    _setPort(null) // Reset state
+  })
+
+  it('should return early if port is null', () => {
+    const video = { frameToken: 'frame-test', id: 'video-test' }
+    _setPort(null)
+
+    openVideo(video)
+
+    expect(global.mockPostMessage).not.toHaveBeenCalled()
+    expect(window.close).not.toHaveBeenCalled()
+  })
+
+  it('should post message and close window after delay', () => {
+    const video = { frameToken: 'frame-123', id: 'vid-abc' }
+    const mockPort = {
+      postMessage: jest.fn()
+    }
+    _setPort(mockPort)
+
+    openVideo(video)
+
+    expect(mockPort.postMessage).toHaveBeenCalledWith({
+      type: 'OPEN_VIDEO',
+      frameToken: 'frame-123',
+      id: 'vid-abc',
+    })
+
+    // The delay shouldn't have passed yet
+    expect(window.close).not.toHaveBeenCalled()
+
+    // Advance time by PORT_FLUSH_DELAY_MS (80ms)
+    jest.advanceTimersByTime(80)
+
+    expect(window.close).toHaveBeenCalled()
   })
 })
