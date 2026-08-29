@@ -917,7 +917,7 @@
   const allVideos = document.getElementsByTagName('video')
 
   function scanVideos() {
-    for (let i = 0; i < allVideos.length; i++) {
+    for (let i = 0, len = allVideos.length; i < len; i++) {
       registerVideo(allVideos[i])
     }
   }
@@ -1024,7 +1024,9 @@
       roundRate,
       pointInRect,
       setSpeed,
-      _setActiveVideo: (v) => { activeVideo = v },
+      _setActiveVideo: (v) => {
+        activeVideo = v
+      },
       _getUserRate: () => userRate,
       togglePlay,
       toggleMute,
