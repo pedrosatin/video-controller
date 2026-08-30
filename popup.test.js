@@ -33,7 +33,18 @@ document.body.innerHTML = `
 
 require('./scripts/utils.js')
 global.mockPostMessage = jest.fn()
-const { formatDuration, reflectEnabled, createVideoCard, showMessage } = require('./popup.js')
+const {
+  formatDuration,
+  reflectEnabled,
+  createVideoCard,
+  updateVideoCard,
+  showMessage,
+  openVideo,
+  renderVideos,
+  _setPort,
+  _setFound,
+  _clearFound,
+} = require('./popup.js')
 
 describe('showMessage', () => {
   let list
@@ -234,5 +245,264 @@ describe('createVideoCard', () => {
     expect(closeSpy).toHaveBeenCalled()
 
     jest.useRealTimers()
+  })
+})
+
+describe('openVideo', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+    jest.spyOn(window, 'close').mockImplementation(() => {})
+    global.mockPostMessage.mockClear()
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+    jest.restoreAllMocks()
+    _setPort(null) // Reset state
+  })
+
+  it('should return early if port is null', () => {
+    const video = { frameToken: 'frame-test', id: 'video-test' }
+    _setPort(null)
+
+    openVideo(video)
+
+    expect(global.mockPostMessage).not.toHaveBeenCalled()
+    expect(window.close).not.toHaveBeenCalled()
+  })
+
+  it('should post message and close window after delay', () => {
+    const video = { frameToken: 'frame-123', id: 'vid-abc' }
+    const mockPort = {
+      postMessage: jest.fn()
+    }
+    _setPort(mockPort)
+
+    openVideo(video)
+
+    expect(mockPort.postMessage).toHaveBeenCalledWith({
+      type: 'OPEN_VIDEO',
+      frameToken: 'frame-123',
+      id: 'vid-abc',
+    })
+
+    // The delay shouldn't have passed yet
+    expect(window.close).not.toHaveBeenCalled()
+
+    // Advance time by PORT_FLUSH_DELAY_MS (80ms)
+    jest.advanceTimersByTime(80)
+
+    expect(window.close).toHaveBeenCalled()
+  })
+})
+
+describe('updateVideoCard', () => {
+  let card
+  let originalVideo
+
+  beforeEach(() => {
+    jest.spyOn(window, 'formatDuration').mockImplementation((s) => (s ? `Duration: ${s}` : ''))
+
+    // Create a base card to update
+    originalVideo = {
+      title: 'Old Title',
+      duration: 100,
+      paused: false,
+      frameToken: 'frame1',
+      id: 'vid1',
+    }
+    window.formatDuration.mockReturnValue('1:40')
+    card = createVideoCard(originalVideo, 0)
+
+    // Clear mock so we can track calls from updateVideoCard
+    window.formatDuration.mockClear()
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('should update card with new title if present', () => {
+    const video = {
+      title: 'New Title',
+      src: 'http://example.com/vid.mp4',
+      duration: 120,
+      paused: true,
+    }
+    window.formatDuration.mockReturnValue('2:00')
+
+    updateVideoCard(card, video, 1)
+
+    expect(card.querySelector('.vc-name').textContent).toBe('New Title')
+    expect(card.querySelector('.vc-name').title).toBe('New Title')
+  })
+
+  it('should fall back to src if title is not present', () => {
+    const video = { src: 'http://example.com/new.mp4', duration: 120, paused: true }
+    window.formatDuration.mockReturnValue('2:00')
+
+    updateVideoCard(card, video, 1)
+
+    expect(card.querySelector('.vc-name').textContent).toBe('http://example.com/new.mp4')
+    expect(card.querySelector('.vc-name').title).toBe('http://example.com/new.mp4')
+  })
+
+  it('should fall back to Video {i+1} if neither title nor src is present', () => {
+    const video = { duration: 120, paused: true }
+    window.formatDuration.mockReturnValue('2:00')
+
+    updateVideoCard(card, video, 1) // index 1 -> Video 2
+
+    expect(card.querySelector('.vc-name').textContent).toBe('Video 2')
+    expect(card.querySelector('.vc-name').title).toBe('Video 2')
+  })
+
+  it('should update state to ⏸ for paused video', () => {
+    const video = { title: 'Vid', paused: true }
+
+    updateVideoCard(card, video, 0)
+
+    expect(card.querySelector('.vc-thumb').textContent).toBe('⏸')
+  })
+
+  it('should update state to ▶ for playing video', () => {
+    // Modify initial card to be paused to verify transition
+    card.querySelector('.vc-thumb').textContent = '⏸'
+
+    const video = { title: 'Vid', paused: false }
+
+    updateVideoCard(card, video, 0)
+
+    expect(card.querySelector('.vc-thumb').textContent).toBe('▶')
+  })
+
+  it('should update duration properly', () => {
+    const video = { title: 'Vid', duration: 65, paused: true }
+    window.formatDuration.mockReturnValue('1:05')
+
+    updateVideoCard(card, video, 0)
+
+    expect(card.querySelector('.vc-meta').textContent).toBe('Duration: 1:05')
+  })
+
+  it('should show "Duration unknown" when duration is falsy', () => {
+    const video = { title: 'Vid', paused: true } // no duration
+    window.formatDuration.mockReturnValue('')
+
+    updateVideoCard(card, video, 0)
+
+    expect(card.querySelector('.vc-meta').textContent).toBe('Duration unknown')
+  })
+
+  it('should update the _vcVideo reference on the card', () => {
+    const video = { title: 'New Vid', duration: 50, paused: true, frameToken: 'frame2', id: 'vid2' }
+
+    updateVideoCard(card, video, 0)
+
+    expect(card._vcVideo).toBe(video)
+  })
+})
+
+describe('renderVideos', () => {
+  let list
+
+  beforeEach(() => {
+    list = document.getElementById('video-list')
+    list.innerHTML = ''
+    _clearFound()
+  })
+
+  it('should show message when no videos are found', () => {
+    // Setup message element space if needed, showMessage appends it
+    renderVideos()
+
+    expect(list.innerHTML).toContain('No videos found on this page.')
+  })
+
+  it('should render new videos and remove the no-videos message', () => {
+    // Add no-videos message
+    list.innerHTML = '<div id="no-videos">No videos found</div>'
+
+    // Setup found videos
+    const vid1 = { frameToken: 'f1', id: 'v1', title: 'Video 1', duration: 10, paused: true }
+    const vid2 = { frameToken: 'f2', id: 'v2', title: 'Video 2', duration: 20, paused: false }
+    _setFound('f1:v1', vid1)
+    _setFound('f2:v2', vid2)
+
+    renderVideos()
+
+    expect(list.querySelector('#no-videos')).toBeNull()
+    expect(list.children.length).toBe(2)
+    expect(list.children[0].dataset.id).toBe('f1:v1')
+    expect(list.children[1].dataset.id).toBe('f2:v2')
+    expect(list.children[0].querySelector('.vc-name').textContent).toBe('Video 1')
+  })
+
+  it('should update existing video cards instead of recreating them', () => {
+    const vid1 = { frameToken: 'f1', id: 'v1', title: 'Video 1', duration: 10, paused: true }
+    _setFound('f1:v1', vid1)
+
+    // First render to create the element
+    renderVideos()
+    const firstRenderChild = list.children[0]
+    expect(firstRenderChild.querySelector('.vc-thumb').textContent).toBe('⏸')
+
+    // Update video info and render again
+    const updatedVid1 = { ...vid1, title: 'Updated Video 1', paused: false }
+    _setFound('f1:v1', updatedVid1)
+
+    renderVideos()
+
+    expect(list.children.length).toBe(1)
+    // The exact DOM node should be retained
+    expect(list.children[0]).toBe(firstRenderChild)
+    // The content should be updated
+    expect(list.children[0].querySelector('.vc-name').textContent).toBe('Updated Video 1')
+    expect(list.children[0].querySelector('.vc-thumb').textContent).toBe('▶')
+  })
+
+  it('should remove elements for videos no longer present', () => {
+    // Render initially with two videos
+    const vid1 = { frameToken: 'f1', id: 'v1', title: 'Video 1', duration: 10, paused: true }
+    const vid2 = { frameToken: 'f2', id: 'v2', title: 'Video 2', duration: 20, paused: false }
+    _setFound('f1:v1', vid1)
+    _setFound('f2:v2', vid2)
+    renderVideos()
+
+    expect(list.children.length).toBe(2)
+
+    // Remove one video and render again
+    _clearFound()
+    _setFound('f2:v2', vid2)
+    renderVideos()
+
+    expect(list.children.length).toBe(1)
+    expect(list.children[0].dataset.id).toBe('f2:v2')
+  })
+
+  it('should reorder existing video cards based on new order', () => {
+    const vid1 = { frameToken: 'f1', id: 'v1', title: 'Video 1', duration: 10, paused: true }
+    const vid2 = { frameToken: 'f2', id: 'v2', title: 'Video 2', duration: 20, paused: false }
+
+    _setFound('f1:v1', vid1)
+    _setFound('f2:v2', vid2)
+    renderVideos()
+
+    const node1 = list.children[0]
+    const node2 = list.children[1]
+
+    expect(node1.dataset.id).toBe('f1:v1')
+    expect(node2.dataset.id).toBe('f2:v2')
+
+    // Change order in the map (Map iterates in insertion order)
+    _clearFound()
+    _setFound('f2:v2', vid2)
+    _setFound('f1:v1', vid1)
+    renderVideos()
+
+    // Nodes should be reordered but retain their original instances
+    expect(list.children.length).toBe(2)
+    expect(list.children[0]).toBe(node2)
+    expect(list.children[1]).toBe(node1)
   })
 })

@@ -36,9 +36,14 @@ const {
   clamp,
   pointInRect,
   setSpeed,
+  changeSpeed,
+  seekTo,
+  seek,
   _setActiveVideo,
   _getUserRate,
   togglePlay,
+  setVolume,
+  togglePiP,
   attachVideo,
   hidePanel,
   promoteToTopLayer,
@@ -575,6 +580,280 @@ describe('setSpeed', () => {
   })
 })
 
+
+
+describe('changeSpeed', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    video.playbackRate = 1
+    _setActiveVideo(video)
+  })
+
+  afterEach(() => {
+    _setActiveVideo(null)
+  })
+
+  it('safely returns if activeVideo is not set', () => {
+    _setActiveVideo(null)
+    const initialRate = _getUserRate()
+    expect(() => changeSpeed(0.5)).not.toThrow()
+    expect(_getUserRate()).toBe(initialRate)
+  })
+
+  it('changes playbackRate correctly for normal values', () => {
+    changeSpeed(0.5)
+    expect(video.playbackRate).toBe(1.5)
+    expect(_getUserRate()).toBe(1.5)
+
+    changeSpeed(-0.25)
+    expect(video.playbackRate).toBe(1.25)
+    expect(_getUserRate()).toBe(1.25)
+  })
+
+  it('clamps the rate to the minimum allowed value (0.1)', () => {
+    video.playbackRate = 0.5
+    changeSpeed(-1.0)
+    expect(video.playbackRate).toBe(0.1)
+    expect(_getUserRate()).toBe(0.1)
+  })
+
+  it('clamps the rate to the maximum allowed value (16)', () => {
+    video.playbackRate = 15.0
+    changeSpeed(2.0)
+    expect(video.playbackRate).toBe(16)
+    expect(_getUserRate()).toBe(16)
+  })
+})
+
+describe('seekTo', () => {
+  let video
+  let durationSpy
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    durationSpy = jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get')
+
+    // We need to store the requested currentTime to test _set
+    let currentVal = 10
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set').mockImplementation(function(val) {
+      currentVal = val
+    })
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockImplementation(function() {
+      return currentVal
+    })
+
+    _setActiveVideo(video)
+  })
+
+  afterEach(() => {
+    _setActiveVideo(null)
+    jest.restoreAllMocks()
+  })
+
+  it('safely returns if activeVideo is not set', () => {
+    _setActiveVideo(null)
+    expect(() => seekTo(0.5)).not.toThrow()
+  })
+
+  it('safely returns if duration is not finite or <= 0', () => {
+    durationSpy.mockReturnValue(NaN)
+    seekTo(0.5)
+    expect(video.currentTime).toBe(10)
+
+    durationSpy.mockReturnValue(0)
+    seekTo(0.5)
+    expect(video.currentTime).toBe(10)
+
+    durationSpy.mockReturnValue(-5)
+    seekTo(0.5)
+    expect(video.currentTime).toBe(10)
+  })
+
+  it('sets currentTime correctly based on fraction', () => {
+    durationSpy.mockReturnValue(100)
+    seekTo(0.5)
+    expect(video.currentTime).toBe(50)
+
+    seekTo(0.25)
+    expect(video.currentTime).toBe(25)
+  })
+
+  it('clamps currentTime to 0 for negative fractions', () => {
+    durationSpy.mockReturnValue(100)
+    seekTo(-0.1)
+    expect(video.currentTime).toBe(0)
+  })
+
+  it('clamps currentTime to duration for fractions > 1', () => {
+    durationSpy.mockReturnValue(100)
+    seekTo(1.5)
+    expect(video.currentTime).toBe(100)
+  })
+})
+
+describe('toggleFullscreen', () => {
+  let video
+  let container
+  let originalFullscreenElement
+
+  const { toggleFullscreen, attachVideo, hidePanel } = require('./content')
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    container = document.createElement('div')
+    container.className = 'player-container'
+    container.appendChild(video)
+    document.body.appendChild(container)
+
+    container.requestFullscreen = jest.fn().mockResolvedValue(undefined)
+    video.requestFullscreen = jest.fn().mockResolvedValue(undefined)
+
+    document.exitFullscreen = jest.fn().mockResolvedValue(undefined)
+
+    originalFullscreenElement = Object.getOwnPropertyDescriptor(
+      Document.prototype,
+      'fullscreenElement',
+    )
+
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    document.body.innerHTML = ''
+    jest.restoreAllMocks()
+    hidePanel()
+
+    if (originalFullscreenElement) {
+      Object.defineProperty(Document.prototype, 'fullscreenElement', originalFullscreenElement)
+    } else {
+      delete Document.prototype.fullscreenElement
+    }
+  })
+
+  it('does nothing if no active video', () => {
+    expect(() => toggleFullscreen()).not.toThrow()
+    expect(container.requestFullscreen).not.toHaveBeenCalled()
+    expect(video.requestFullscreen).not.toHaveBeenCalled()
+  })
+
+  it('requests fullscreen on container when not in fullscreen', async () => {
+    attachVideo(video)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => null,
+      configurable: true,
+    })
+
+    toggleFullscreen()
+    await Promise.resolve()
+
+    expect(container.requestFullscreen).toHaveBeenCalled()
+    expect(video.requestFullscreen).not.toHaveBeenCalled()
+  })
+
+  it('falls back to requesting fullscreen on activeVideo if container request fails', async () => {
+    attachVideo(video)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => null,
+      configurable: true,
+    })
+
+    container.requestFullscreen.mockRejectedValue(new Error('Container Fullscreen Error'))
+
+    toggleFullscreen()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(container.requestFullscreen).toHaveBeenCalled()
+    expect(video.requestFullscreen).toHaveBeenCalled()
+    expect(console.warn).toHaveBeenCalledWith(
+      '[VideoController] container.requestFullscreen failed:',
+      expect.any(Error),
+    )
+  })
+
+  it('logs warning if activeVideo requestFullscreen also fails', async () => {
+    attachVideo(video)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => null,
+      configurable: true,
+    })
+
+    container.requestFullscreen.mockRejectedValue(new Error('Container Fullscreen Error'))
+    video.requestFullscreen.mockRejectedValue(new Error('Video Fullscreen Error'))
+
+    toggleFullscreen()
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(container.requestFullscreen).toHaveBeenCalled()
+    expect(video.requestFullscreen).toHaveBeenCalled()
+    expect(console.warn).toHaveBeenCalledWith(
+      '[VideoController] activeVideo.requestFullscreen failed:',
+      expect.any(Error),
+    )
+  })
+
+  it('exits fullscreen if document is already in fullscreen mode', async () => {
+    attachVideo(video)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => document.createElement('div'), // truthy value
+      configurable: true,
+    })
+
+    toggleFullscreen()
+    await Promise.resolve()
+
+    expect(document.exitFullscreen).toHaveBeenCalled()
+    expect(container.requestFullscreen).not.toHaveBeenCalled()
+    expect(video.requestFullscreen).not.toHaveBeenCalled()
+  })
+
+  it('logs warning if exitFullscreen fails', async () => {
+    attachVideo(video)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => document.createElement('div'),
+      configurable: true,
+    })
+
+    document.exitFullscreen.mockRejectedValue(new Error('Exit Fullscreen Error'))
+
+    toggleFullscreen()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(document.exitFullscreen).toHaveBeenCalled()
+    expect(console.warn).toHaveBeenCalledWith(
+      '[VideoController] exitFullscreen failed:',
+      expect.any(Error),
+    )
+  })
+
+  it('requests fullscreen on parentElement if no player container is found', async () => {
+    const parent = document.createElement('div')
+    parent.requestFullscreen = jest.fn().mockResolvedValue(undefined)
+
+    const orphanVideo = document.createElement('video')
+    orphanVideo.requestFullscreen = jest.fn().mockResolvedValue(undefined)
+    parent.appendChild(orphanVideo)
+    document.body.appendChild(parent)
+
+    attachVideo(orphanVideo)
+    Object.defineProperty(Document.prototype, 'fullscreenElement', {
+      get: () => null,
+      configurable: true,
+    })
+
+    toggleFullscreen()
+    await Promise.resolve()
+
+    expect(parent.requestFullscreen).toHaveBeenCalled()
+    expect(orphanVideo.requestFullscreen).not.toHaveBeenCalled()
+  })
+})
+
 describe('toggleMute', () => {
   let video
   const { toggleMute, attachVideo, applyEnabled, hidePanel } = require('./content')
@@ -602,6 +881,56 @@ describe('toggleMute', () => {
     hidePanel() // Unsets activeVideo
     // Make sure toggleMute doesn't throw when activeVideo is null
     expect(() => toggleMute()).not.toThrow()
+  })
+})
+
+describe('setVolume', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    document.body.appendChild(video)
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+    hidePanel()
+    video.remove()
+  })
+
+  it('does nothing if no active video is attached', () => {
+    hidePanel()
+    setVolume(0.5)
+    expect(video.volume).toBe(1) // Default volume is 1
+  })
+
+  it('sets volume on active video within clamped bounds (0 to 1)', () => {
+    attachVideo(video)
+
+    setVolume(0.5)
+    expect(video.volume).toBe(0.5)
+
+    setVolume(1.5)
+    expect(video.volume).toBe(1) // Clamped to 1
+
+    setVolume(-0.5)
+    expect(video.volume).toBe(0) // Clamped to 0
+  })
+
+  it('un-mutes the video if volume > 0', () => {
+    video.muted = true
+    attachVideo(video)
+
+    setVolume(0.5)
+    expect(video.muted).toBe(false)
+  })
+
+  it('does not un-mute the video if volume is 0', () => {
+    video.muted = true
+    attachVideo(video)
+
+    setVolume(0)
+    expect(video.muted).toBe(true)
   })
 })
 
@@ -672,6 +1001,108 @@ describe('togglePlay', () => {
   })
 })
 
+describe('togglePiP', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+    // Mock requestPictureInPicture on the video instance
+    video.requestPictureInPicture = jest.fn().mockResolvedValue()
+    // Mock document.exitPictureInPicture
+    document.exitPictureInPicture = jest.fn().mockResolvedValue()
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+    hidePanel()
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: null,
+      configurable: true,
+    })
+  })
+
+  it('does nothing if no active video is attached', () => {
+    hidePanel()
+    togglePiP()
+
+    expect(video.requestPictureInPicture).not.toHaveBeenCalled()
+    expect(document.exitPictureInPicture).not.toHaveBeenCalled()
+  })
+
+  it('requests Picture-in-Picture if not currently in PiP mode', () => {
+    attachVideo(video)
+
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: null,
+      configurable: true,
+    })
+
+    togglePiP()
+
+    expect(video.requestPictureInPicture).toHaveBeenCalled()
+    expect(document.exitPictureInPicture).not.toHaveBeenCalled()
+  })
+
+  it('exits Picture-in-Picture if currently in PiP mode', () => {
+    attachVideo(video)
+
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: video,
+      configurable: true,
+    })
+
+    togglePiP()
+
+    expect(document.exitPictureInPicture).toHaveBeenCalled()
+    expect(video.requestPictureInPicture).not.toHaveBeenCalled()
+  })
+
+  it('catches and logs errors when requestPictureInPicture() fails', async () => {
+    attachVideo(video)
+
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: null,
+      configurable: true,
+    })
+
+    const error = new Error('PiP failed')
+    video.requestPictureInPicture.mockRejectedValue(error)
+
+    togglePiP()
+
+    // Give microtask queue time to process the rejection
+    await Promise.resolve()
+
+    expect(console.warn).toHaveBeenCalledWith(
+      '[VideoController] requestPictureInPicture failed:',
+      error,
+    )
+  })
+
+  it('catches and logs errors when exitPictureInPicture() fails', async () => {
+    attachVideo(video)
+
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: video,
+      configurable: true,
+    })
+
+    const error = new Error('Exit PiP failed')
+    document.exitPictureInPicture.mockRejectedValue(error)
+
+    togglePiP()
+
+    // Give microtask queue time to process the rejection
+    await Promise.resolve()
+
+    expect(console.warn).toHaveBeenCalledWith(
+      '[VideoController] exitPictureInPicture failed:',
+      error,
+    )
+  })
+})
+
 describe('promoteToTopLayer', () => {
   let el
 
@@ -701,5 +1132,94 @@ describe('promoteToTopLayer', () => {
     })
     expect(() => promoteToTopLayer(el)).not.toThrow()
     expect(el.hidePopover).toHaveBeenCalled()
+  })
+})
+
+describe('seek', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    _setActiveVideo(video)
+  })
+
+  afterEach(() => {
+    _setActiveVideo(null)
+    jest.restoreAllMocks()
+  })
+
+  it('safely returns if activeVideo is not set', () => {
+    _setActiveVideo(null)
+    expect(() => seek(10)).not.toThrow()
+  })
+
+  it('adds positive delta to currentTime', () => {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockReturnValue(10)
+    jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get').mockReturnValue(100)
+    const setTimeSpy = jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set')
+
+    seek(5)
+
+    expect(setTimeSpy).toHaveBeenCalledWith(15)
+  })
+
+  it('adds negative delta to currentTime', () => {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockReturnValue(20)
+    jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get').mockReturnValue(100)
+    const setTimeSpy = jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set')
+
+    seek(-5)
+
+    expect(setTimeSpy).toHaveBeenCalledWith(15)
+  })
+
+  it('clamps currentTime to 0 when seeking backwards past the beginning', () => {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockReturnValue(3)
+    jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get').mockReturnValue(100)
+    const setTimeSpy = jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set')
+
+    seek(-5)
+
+    expect(setTimeSpy).toHaveBeenCalledWith(0)
+  })
+
+  it('clamps currentTime to duration when seeking forwards past the end', () => {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockReturnValue(90)
+    jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get').mockReturnValue(100)
+    const setTimeSpy = jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set')
+
+    seek(15)
+
+    expect(setTimeSpy).toHaveBeenCalledWith(100)
+  })
+
+  it('allows seeking without an upper limit if duration is NaN', () => {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockReturnValue(90)
+    jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get').mockReturnValue(NaN)
+    const setTimeSpy = jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set')
+
+    seek(15)
+
+    expect(setTimeSpy).toHaveBeenCalledWith(105)
+  })
+
+  it('allows seeking without an upper limit if duration is Infinity', () => {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockReturnValue(90)
+    jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get').mockReturnValue(Infinity)
+    const setTimeSpy = jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set')
+
+    seek(15)
+
+    expect(setTimeSpy).toHaveBeenCalledWith(105)
+  })
+
+  it('allows seeking without an upper limit if duration is <= 0', () => {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockReturnValue(90)
+    jest.spyOn(HTMLMediaElement.prototype, 'duration', 'get').mockReturnValue(0)
+    const setTimeSpy = jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set')
+
+    seek(15)
+
+    expect(setTimeSpy).toHaveBeenCalledWith(105)
   })
 })

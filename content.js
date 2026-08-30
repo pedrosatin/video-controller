@@ -328,6 +328,7 @@
   }
 
   function showIndicatorEl() {
+    indRectCache = null
     indicator.style.display = 'flex'
     if (POPOVER_OK && !indicator.matches(':popover-open')) {
       try {
@@ -339,6 +340,7 @@
   }
 
   function hideIndicatorEl() {
+    indRectCache = null
     indicator.style.display = 'none'
     dropFromTopLayer(indicator)
   }
@@ -510,9 +512,9 @@
     }
     selectorRow.style.display = 'flex'
 
-    let snapshot = ''
-    for (let i = 0; i < videos.length; i++) {
-      if (i > 0) snapshot += ','
+    let snapshot = videoIds.get(videos[0])
+    for (let i = 1; i < videos.length; i++) {
+      snapshot += ','
       snapshot += videoIds.get(videos[i])
     }
     if (snapshot !== selectorSnapshot) {
@@ -573,11 +575,13 @@
   /* Inline styles must win the cascade against both our stylesheet and any
      page rule targeting #vc-panel, hence setProperty with 'important'. */
   function placePanel(left, top) {
+    panelRectCache = null
     panel.style.setProperty('left', `${left}px`, 'important')
     panel.style.setProperty('top', `${top}px`, 'important')
   }
 
   function showPanel() {
+    panelRectCache = null
     /* re-append last so the panel wins z-index ties against late site nodes */
     docRoot().appendChild(panel)
     panel.style.display = 'block'
@@ -597,6 +601,7 @@
   }
 
   function hidePanel() {
+    panelRectCache = null
     panel.style.display = 'none'
     dropFromTopLayer(panel)
     stopPolling()
@@ -614,169 +619,174 @@
     if (panel.style.display !== 'none') hidePanel()
   }
 
-  closeBtn.addEventListener('click', hidePanel)
+  function bindPanelEvents() {
+    closeBtn.addEventListener('click', hidePanel)
 
-  /* Pin toggle – when pinned the panel is not draggable */
-  let isPinned = false
-  pinBtn.addEventListener('click', () => {
-    isPinned = !isPinned
-    pinBtn.classList.toggle('vc-btn-active', isPinned)
-    pinBtn.title = isPinned ? 'Unpin panel (drag enabled when unpinned)' : 'Pin panel'
-  })
+    /* Pin toggle – when pinned the panel is not draggable */
+    let isPinned = false
+    pinBtn.addEventListener('click', () => {
+      isPinned = !isPinned
+      pinBtn.classList.toggle('vc-btn-active', isPinned)
+      pinBtn.title = isPinned ? 'Unpin panel (drag enabled when unpinned)' : 'Pin panel'
+    })
 
-  /* Drag-to-move via the header */
-  const header = q('#vc-header')
-  header.addEventListener('mousedown', (e) => {
-    if (isPinned || e.target.closest('button')) return
-    dragState = {
-      startX: e.clientX,
-      startY: e.clientY,
-      origLeft: panel.offsetLeft,
-      origTop: panel.offsetTop,
-    }
-    panel.classList.add('vc-dragging')
-    e.preventDefault()
-  })
+    /* Drag-to-move via the header */
+    const header = q('#vc-header')
+    header.addEventListener('mousedown', (e) => {
+      if (isPinned || e.target.closest('button')) return
+      dragState = {
+        startX: e.clientX,
+        startY: e.clientY,
+        origLeft: panel.offsetLeft,
+        origTop: panel.offsetTop,
+        panelWidth: panel.offsetWidth,
+      }
+      panel.classList.add('vc-dragging')
+      e.preventDefault()
+    })
 
-  document.addEventListener('mousemove', (e) => {
-    if (!dragState) return
-    const dx = e.clientX - dragState.startX
-    const dy = e.clientY - dragState.startY
-    /* keep at least part of the header on-screen so the panel stays reachable */
-    const left = clamp(dragState.origLeft + dx, 60 - panel.offsetWidth, window.innerWidth - 60)
-    const top = clamp(dragState.origTop + dy, 0, window.innerHeight - 36)
-    placePanel(left, top)
-  })
+    document.addEventListener('mousemove', (e) => {
+      if (!dragState) return
+      const dx = e.clientX - dragState.startX
+      const dy = e.clientY - dragState.startY
+      /* keep at least part of the header on-screen so the panel stays reachable */
+      const left = clamp(dragState.origLeft + dx, 60 - dragState.panelWidth, window.innerWidth - 60)
+      const top = clamp(dragState.origTop + dy, 0, window.innerHeight - 36)
+      placePanel(left, top)
+    })
 
-  document.addEventListener('mouseup', () => {
-    if (!dragState) return
-    dragState = null
-    panel.classList.remove('vc-dragging')
-  })
+    document.addEventListener('mouseup', () => {
+      if (!dragState) return
+      dragState = null
+      panel.classList.remove('vc-dragging')
+    })
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // BUTTON WIRING
-  // ══════════════════════════════════════════════════════════════════════════
-  playBtn.addEventListener('click', togglePlay)
+    // ══════════════════════════════════════════════════════════════════════════
+    // BUTTON WIRING
+    // ══════════════════════════════════════════════════════════════════════════
+    playBtn.addEventListener('click', togglePlay)
 
-  ;[
-    ['#vc-back-large', () => seek(-SEEK_LARGE)],
-    ['#vc-back-small', () => seek(-SEEK_SMALL)],
-    ['#vc-fwd-small', () => seek(+SEEK_SMALL)],
-    ['#vc-fwd-large', () => seek(+SEEK_LARGE)],
-    ['#vc-spd-m-c', () => changeSpeed(-SPEED_COARSE)],
-    ['#vc-spd-m-f', () => changeSpeed(-SPEED_FINE)],
-    ['#vc-spd-rst', () => setSpeed(1)],
-    ['#vc-spd-p-f', () => changeSpeed(+SPEED_FINE)],
-    ['#vc-spd-p-c', () => changeSpeed(+SPEED_COARSE)],
-  ].forEach(([sel, fn]) => q(sel).addEventListener('click', fn))
+    ;[
+      ['#vc-back-large', () => seek(-SEEK_LARGE)],
+      ['#vc-back-small', () => seek(-SEEK_SMALL)],
+      ['#vc-fwd-small', () => seek(+SEEK_SMALL)],
+      ['#vc-fwd-large', () => seek(+SEEK_LARGE)],
+      ['#vc-spd-m-c', () => changeSpeed(-SPEED_COARSE)],
+      ['#vc-spd-m-f', () => changeSpeed(-SPEED_FINE)],
+      ['#vc-spd-rst', () => setSpeed(1)],
+      ['#vc-spd-p-f', () => changeSpeed(+SPEED_FINE)],
+      ['#vc-spd-p-c', () => changeSpeed(+SPEED_COARSE)],
+    ].forEach(([sel, fn]) => q(sel).addEventListener('click', fn))
 
-  presetBtns.forEach((btn) => {
-    btn.addEventListener('click', () => setSpeed(parseFloat(btn.dataset.speed)))
-  })
+    presetBtns.forEach((btn) => {
+      btn.addEventListener('click', () => setSpeed(parseFloat(btn.dataset.speed)))
+    })
 
-  muteBtn.addEventListener('click', toggleMute)
+    muteBtn.addEventListener('click', toggleMute)
 
-  volSlider.addEventListener('input', () => {
-    setVolume(parseFloat(volSlider.value))
-    updateVolumeUI()
-  })
-
-  progressBar.addEventListener('pointerdown', () => {
-    scrubbing = true
-  })
-  document.addEventListener('pointerup', () => {
-    scrubbing = false
-  })
-
-  progressBar.addEventListener('input', () => {
-    seekTo(progressBar.value / 1000)
-  })
-
-  q('#vc-fullscreen-btn').addEventListener('click', toggleFullscreen)
-  q('#vc-pip-btn').addEventListener('click', togglePiP)
-  loopBtn.addEventListener('click', toggleLoop)
-
-  document.addEventListener('fullscreenchange', () => {
-    updateFullscreenBtn()
-    if (POPOVER_OK) {
-      /* the fullscreen element joins the top layer above us — re-promote */
-      if (panel.style.display !== 'none') promoteToTopLayer(panel)
-      return
-    }
-    /* Fallback without Popover API: the top layer only renders children of
-       the fullscreen element, so re-parent the panel into it. Skip when the
-       video itself is fullscreen — <video> children are not rendered. */
-    const fsEl = document.fullscreenElement
-    if (fsEl && fsEl !== activeVideo && fsEl.tagName !== 'VIDEO') {
-      fsEl.appendChild(panel)
-      fsEl.appendChild(indicator)
-    } else if (!fsEl) {
-      docRoot().appendChild(panel)
-      docRoot().appendChild(indicator)
-    }
-  })
-  document.addEventListener('webkitfullscreenchange', updateFullscreenBtn)
-
-  /* If the site opens its own popover after ours, it stacks above us in the
-     top layer. ToggleEvents don't bubble but are visible to a capturing
-     listener; re-promote so the panel stays on top. Our own toggles are
-     filtered out to avoid recursion. */
-  document.addEventListener(
-    'toggle',
-    (e) => {
-      if (e.target === panel || e.target === indicator) return
-      if (panel.style.display !== 'none') promoteToTopLayer(panel)
-    },
-    true,
-  )
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // KEYBOARD SHORTCUTS (active only while the panel is open)
-  // ══════════════════════════════════════════════════════════════════════════
-  const IGNORED_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
-
-  const KEY_HANDLERS = {
-    ' ': () => togglePlay(),
-    k: () => togglePlay(),
-    ArrowLeft: (e) => seek(e.shiftKey ? -SEEK_LARGE : -SEEK_SMALL),
-    ArrowRight: (e) => seek(e.shiftKey ? +SEEK_LARGE : +SEEK_SMALL),
-    ArrowUp: () => {
-      setVolume((_get(activeVideo, 'volume') || 0) + 0.1)
+    volSlider.addEventListener('input', () => {
+      setVolume(parseFloat(volSlider.value))
       updateVolumeUI()
-    },
-    ArrowDown: () => {
-      setVolume((_get(activeVideo, 'volume') || 0) - 0.1)
-      updateVolumeUI()
-    },
-    '>': () => changeSpeed(+SPEED_FINE),
-    '<': () => changeSpeed(-SPEED_FINE),
-    m: () => toggleMute(),
-    f: () => toggleFullscreen(),
-    p: () => togglePiP(),
-    l: () => toggleLoop(),
-    Escape: () => hidePanel(),
+    })
+
+    progressBar.addEventListener('pointerdown', () => {
+      scrubbing = true
+    })
+    document.addEventListener('pointerup', () => {
+      scrubbing = false
+    })
+
+    progressBar.addEventListener('input', () => {
+      seekTo(progressBar.value / 1000)
+    })
+
+    q('#vc-fullscreen-btn').addEventListener('click', toggleFullscreen)
+    q('#vc-pip-btn').addEventListener('click', togglePiP)
+    loopBtn.addEventListener('click', toggleLoop)
+
+    document.addEventListener('fullscreenchange', () => {
+      updateFullscreenBtn()
+      if (POPOVER_OK) {
+        /* the fullscreen element joins the top layer above us — re-promote */
+        if (panel.style.display !== 'none') promoteToTopLayer(panel)
+        return
+      }
+      /* Fallback without Popover API: the top layer only renders children of
+         the fullscreen element, so re-parent the panel into it. Skip when the
+         video itself is fullscreen — <video> children are not rendered. */
+      const fsEl = document.fullscreenElement
+      if (fsEl && fsEl !== activeVideo && fsEl.tagName !== 'VIDEO') {
+        fsEl.appendChild(panel)
+        fsEl.appendChild(indicator)
+      } else if (!fsEl) {
+        docRoot().appendChild(panel)
+        docRoot().appendChild(indicator)
+      }
+    })
+    document.addEventListener('webkitfullscreenchange', updateFullscreenBtn)
+
+    /* If the site opens its own popover after ours, it stacks above us in the
+       top layer. ToggleEvents don't bubble but are visible to a capturing
+       listener; re-promote so the panel stays on top. Our own toggles are
+       filtered out to avoid recursion. */
+    document.addEventListener(
+      'toggle',
+      (e) => {
+        if (e.target === panel || e.target === indicator) return
+        if (panel.style.display !== 'none') promoteToTopLayer(panel)
+      },
+      true,
+    )
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // KEYBOARD SHORTCUTS (active only while the panel is open)
+    // ══════════════════════════════════════════════════════════════════════════
+    const IGNORED_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
+
+    const KEY_HANDLERS = {
+      ' ': () => togglePlay(),
+      k: () => togglePlay(),
+      ArrowLeft: (e) => seek(e.shiftKey ? -SEEK_LARGE : -SEEK_SMALL),
+      ArrowRight: (e) => seek(e.shiftKey ? +SEEK_LARGE : +SEEK_SMALL),
+      ArrowUp: () => {
+        setVolume((_get(activeVideo, 'volume') || 0) + 0.1)
+        updateVolumeUI()
+      },
+      ArrowDown: () => {
+        setVolume((_get(activeVideo, 'volume') || 0) - 0.1)
+        updateVolumeUI()
+      },
+      '>': () => changeSpeed(+SPEED_FINE),
+      '<': () => changeSpeed(-SPEED_FINE),
+      m: () => toggleMute(),
+      f: () => toggleFullscreen(),
+      p: () => togglePiP(),
+      l: () => toggleLoop(),
+      Escape: () => hidePanel(),
+    }
+
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (panel.style.display === 'none' || !activeVideo) return
+        if (IGNORED_TAGS.has(e.target.tagName)) return
+        if (e.target.isContentEditable) return
+        /* keep native Space/Enter activation on focused panel buttons */
+        if (panel.contains(e.target) && (e.key === ' ' || e.key === 'Enter')) return
+
+        const handler = KEY_HANDLERS[e.key]
+        if (handler) {
+          if (e.key !== 'Escape') {
+            e.preventDefault()
+          }
+          handler(e)
+        }
+      },
+      true,
+    )
   }
 
-  document.addEventListener(
-    'keydown',
-    (e) => {
-      if (panel.style.display === 'none' || !activeVideo) return
-      if (IGNORED_TAGS.has(e.target.tagName)) return
-      if (e.target.isContentEditable) return
-      /* keep native Space/Enter activation on focused panel buttons */
-      if (panel.contains(e.target) && (e.key === ' ' || e.key === 'Enter')) return
-
-      const handler = KEY_HANDLERS[e.key]
-      if (handler) {
-        if (e.key !== 'Escape') {
-          e.preventDefault()
-        }
-        handler(e)
-      }
-    },
-    true,
-  )
+  bindPanelEvents()
 
   // ══════════════════════════════════════════════════════════════════════════
   // HOVER INDICATOR
@@ -787,6 +797,7 @@
   // The same check re-runs on scroll so the indicator tracks the video.
   // ══════════════════════════════════════════════════════════════════════════
   function positionIndicator(video) {
+    indRectCache = null
     /* viewport coords — the indicator is position: fixed */
     const r = video.getBoundingClientRect()
     indicator.style.setProperty('left', `${r.left + 8}px`, 'important')
@@ -797,19 +808,23 @@
     return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
   }
 
-  const videoRects = new WeakMap()
+  let videoRects = new WeakMap()
   let lastRectsTime = 0
+  let panelRectCache = null
+  let indRectCache = null
 
   function videoAtPoint(x, y) {
-    let match = null
     const now = performance.now()
     const useCache = now - lastRectsTime < 500
 
     if (!useCache) {
       lastRectsTime = now
+      videoRects = new WeakMap()
     }
 
-    for (const v of visibilityObserver ? visibleVideos : knownVideos) {
+    const videos = Array.from(visibilityObserver ? visibleVideos : knownVideos)
+    for (let i = videos.length - 1; i >= 0; i--) {
+      const v = videos[i]
       if (!v.isConnected) continue
 
       let r = videoRects.get(v)
@@ -819,17 +834,19 @@
       }
 
       if (r.width < 48 || r.height < 48) continue /* skip tracking pixels / thumbnails */
-      if (pointInRect(x, y, r)) match = v
+      if (pointInRect(x, y, r)) return v
     }
-    return match
+    return null
   }
 
   function updateIndicator(x, y) {
     if (!vcEnabled) return
-    const overPanel =
-      panel.style.display !== 'none' && pointInRect(x, y, panel.getBoundingClientRect())
-    const overInd =
-      indicator.style.display !== 'none' && pointInRect(x, y, indicator.getBoundingClientRect())
+
+    if (!panelRectCache) panelRectCache = panel.getBoundingClientRect()
+    if (!indRectCache) indRectCache = indicator.getBoundingClientRect()
+
+    const overPanel = panel.style.display !== 'none' && pointInRect(x, y, panelRectCache)
+    const overInd = indicator.style.display !== 'none' && pointInRect(x, y, indRectCache)
     const video = overPanel ? null : videoAtPoint(x, y)
 
     if (video || overInd) {
@@ -879,6 +896,8 @@
     'scroll',
     () => {
       lastRectsTime = 0
+      panelRectCache = null
+      indRectCache = null
       scheduleIndicatorUpdate()
     },
     {
@@ -891,6 +910,8 @@
     'resize',
     () => {
       lastRectsTime = 0
+      panelRectCache = null
+      indRectCache = null
     },
     { passive: true },
   )
@@ -917,7 +938,7 @@
   const allVideos = document.getElementsByTagName('video')
 
   function scanVideos() {
-    for (let i = 0; i < allVideos.length; i++) {
+    for (let i = 0, len = allVideos.length; i < len; i++) {
       registerVideo(allVideos[i])
     }
   }
@@ -1026,12 +1047,18 @@
       roundRate,
       pointInRect,
       setSpeed,
+      changeSpeed,
+      seekTo,
       _setActiveVideo: (v) => {
         activeVideo = v
       },
       _getUserRate: () => userRate,
+      seek,
+      togglePiP,
       togglePlay,
+      setVolume,
       toggleMute,
+      toggleFullscreen,
       attachVideo,
       hidePanel,
       applyEnabled,
