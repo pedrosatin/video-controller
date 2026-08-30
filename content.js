@@ -797,19 +797,21 @@
     return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
   }
 
-  const videoRects = new WeakMap()
+  let videoRects = new WeakMap()
   let lastRectsTime = 0
 
   function videoAtPoint(x, y) {
-    let match = null
     const now = performance.now()
     const useCache = now - lastRectsTime < 500
 
     if (!useCache) {
       lastRectsTime = now
+      videoRects = new WeakMap()
     }
 
-    for (const v of visibilityObserver ? visibleVideos : knownVideos) {
+    const videos = Array.from(visibilityObserver ? visibleVideos : knownVideos)
+    for (let i = videos.length - 1; i >= 0; i--) {
+      const v = videos[i]
       if (!v.isConnected) continue
 
       let r = videoRects.get(v)
@@ -819,9 +821,9 @@
       }
 
       if (r.width < 48 || r.height < 48) continue /* skip tracking pixels / thumbnails */
-      if (pointInRect(x, y, r)) match = v
+      if (pointInRect(x, y, r)) return v
     }
-    return match
+    return null
   }
 
   function updateIndicator(x, y) {
