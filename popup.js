@@ -136,6 +136,10 @@
       list.removeChild(noVideos)
     }
 
+    diffVideoCards(videos)
+  }
+
+  function diffVideoCards(videos) {
     const existingMap = new Map()
     for (const child of list.children) {
       if (child.dataset.id) {
