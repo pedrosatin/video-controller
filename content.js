@@ -920,7 +920,7 @@
   const allVideos = document.getElementsByTagName('video')
 
   function scanVideos() {
-    for (let i = 0; i < allVideos.length; i++) {
+    for (let i = 0, len = allVideos.length; i < len; i++) {
       registerVideo(allVideos[i])
     }
   }
