@@ -633,6 +633,7 @@
       startY: e.clientY,
       origLeft: panel.offsetLeft,
       origTop: panel.offsetTop,
+      panelWidth: panel.offsetWidth,
     }
     panel.classList.add('vc-dragging')
     e.preventDefault()
@@ -643,7 +644,7 @@
     const dx = e.clientX - dragState.startX
     const dy = e.clientY - dragState.startY
     /* keep at least part of the header on-screen so the panel stays reachable */
-    const left = clamp(dragState.origLeft + dx, 60 - panel.offsetWidth, window.innerWidth - 60)
+    const left = clamp(dragState.origLeft + dx, 60 - dragState.panelWidth, window.innerWidth - 60)
     const top = clamp(dragState.origTop + dy, 0, window.innerHeight - 36)
     placePanel(left, top)
   })
