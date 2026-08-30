@@ -221,7 +221,11 @@
       updateVideoCard,
       showMessage,
       openVideo,
-      _setPort: (p) => { port = p }
+      renderVideos,
+      _setPort: (p) => { port = p },
+      _setFound: (key, val) => found.set(key, val),
+      _clearFound: () => found.clear(),
+      _getFound: () => found,
     }
   }
 })()
