@@ -56,13 +56,6 @@
     list.appendChild(p)
   }
 
-  function createElement(tag, className, textContent) {
-    const el = document.createElement(tag)
-    if (className) el.className = className
-    if (textContent !== undefined) el.textContent = textContent
-    return el
-  }
-
   function bindVideoCardEvents(card, btn, v) {
     // Clear old listeners by replacing elements with clones if needed, or simply handle it.
     // Instead of replacing the whole element, we'll store a reference to the current video object on the element.
@@ -77,49 +70,46 @@
     }
   }
 
-  function createVideoCard(v, i) {
-    const name = v.title || v.src || `Video ${i + 1}`
-    const dur = formatDuration(v.duration)
-    const state = v.paused ? '⏸' : '▶'
-
-    /* Build card with DOM APIs to avoid XSS from untrusted video metadata */
-    const card = createElement('div', 'video-card')
-    const thumb = createElement('span', 'vc-thumb', state)
-    const info = createElement('div', 'vc-info')
-
-    const nameEl = createElement('div', 'vc-name', name)
-    nameEl.title = name /* textContent is XSS-safe */
-
-    const metaEl = createElement('div', 'vc-meta', dur ? `Duration: ${dur}` : 'Duration unknown')
-
-    const btn = createElement('button', 'vc-open-btn', 'Control')
-
-    bindVideoCardEvents(card, btn, v)
-
-    info.appendChild(nameEl)
-    info.appendChild(metaEl)
-    card.appendChild(thumb)
-    card.appendChild(info)
-    card.appendChild(btn)
-
-    card.dataset.id = `${v.frameToken}:${v.id}`
-    return card
-  }
+  const cardTemplate = new DOMParser().parseFromString(
+    `
+      <div class="video-card">
+        <span class="vc-thumb"></span>
+        <div class="vc-info">
+          <div class="vc-name"></div>
+          <div class="vc-meta"></div>
+        </div>
+        <button class="vc-open-btn">Control</button>
+      </div>
+    `,
+    'text/html',
+  ).body.firstElementChild
 
   function updateVideoCard(card, v, i) {
     const name = v.title || v.src || `Video ${i + 1}`
     const dur = formatDuration(v.duration)
     const state = v.paused ? '⏸' : '▶'
 
-    card.children[0].textContent = state
+    card.querySelector('.vc-thumb').textContent = state
 
-    const info = card.children[1]
-    info.children[0].textContent = name
-    info.children[0].title = name
-    info.children[1].textContent = dur ? `Duration: ${dur}` : 'Duration unknown'
+    const nameEl = card.querySelector('.vc-name')
+    nameEl.textContent = name
+    nameEl.title = name
+
+    card.querySelector('.vc-meta').textContent = dur ? `Duration: ${dur}` : 'Duration unknown'
 
     // Update the video reference for events
     card._vcVideo = v
+  }
+
+  function createVideoCard(v, i) {
+    const card = cardTemplate.cloneNode(true)
+    updateVideoCard(card, v, i)
+
+    const btn = card.querySelector('.vc-open-btn')
+    bindVideoCardEvents(card, btn, v)
+
+    card.dataset.id = `${v.frameToken}:${v.id}`
+    return card
   }
 
   function renderVideos() {
@@ -136,6 +126,10 @@
       list.removeChild(noVideos)
     }
 
+    diffVideoCards(videos)
+  }
+
+  function diffVideoCards(videos) {
     const existingMap = new Map()
     for (const child of list.children) {
       if (child.dataset.id) {
@@ -214,6 +208,18 @@
 
   /* Export for testing */
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { formatDuration, reflectEnabled, createVideoCard, showMessage }
+    module.exports = {
+      formatDuration,
+      reflectEnabled,
+      createVideoCard,
+      updateVideoCard,
+      showMessage,
+      openVideo,
+      renderVideos,
+      _setPort: (p) => { port = p },
+      _setFound: (key, val) => found.set(key, val),
+      _clearFound: () => found.clear(),
+      _getFound: () => found,
+    }
   }
 })()
