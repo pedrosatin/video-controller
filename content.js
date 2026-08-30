@@ -328,6 +328,7 @@
   }
 
   function showIndicatorEl() {
+    indRectCache = null
     indicator.style.display = 'flex'
     if (POPOVER_OK && !indicator.matches(':popover-open')) {
       try {
@@ -339,6 +340,7 @@
   }
 
   function hideIndicatorEl() {
+    indRectCache = null
     indicator.style.display = 'none'
     dropFromTopLayer(indicator)
   }
@@ -573,11 +575,13 @@
   /* Inline styles must win the cascade against both our stylesheet and any
      page rule targeting #vc-panel, hence setProperty with 'important'. */
   function placePanel(left, top) {
+    panelRectCache = null
     panel.style.setProperty('left', `${left}px`, 'important')
     panel.style.setProperty('top', `${top}px`, 'important')
   }
 
   function showPanel() {
+    panelRectCache = null
     /* re-append last so the panel wins z-index ties against late site nodes */
     docRoot().appendChild(panel)
     panel.style.display = 'block'
@@ -597,6 +601,7 @@
   }
 
   function hidePanel() {
+    panelRectCache = null
     panel.style.display = 'none'
     dropFromTopLayer(panel)
     stopPolling()
@@ -792,6 +797,7 @@
   // The same check re-runs on scroll so the indicator tracks the video.
   // ══════════════════════════════════════════════════════════════════════════
   function positionIndicator(video) {
+    indRectCache = null
     /* viewport coords — the indicator is position: fixed */
     const r = video.getBoundingClientRect()
     indicator.style.setProperty('left', `${r.left + 8}px`, 'important')
@@ -804,6 +810,8 @@
 
   let videoRects = new WeakMap()
   let lastRectsTime = 0
+  let panelRectCache = null
+  let indRectCache = null
 
   function videoAtPoint(x, y) {
     const now = performance.now()
@@ -833,10 +841,12 @@
 
   function updateIndicator(x, y) {
     if (!vcEnabled) return
-    const overPanel =
-      panel.style.display !== 'none' && pointInRect(x, y, panel.getBoundingClientRect())
-    const overInd =
-      indicator.style.display !== 'none' && pointInRect(x, y, indicator.getBoundingClientRect())
+
+    if (!panelRectCache) panelRectCache = panel.getBoundingClientRect()
+    if (!indRectCache) indRectCache = indicator.getBoundingClientRect()
+
+    const overPanel = panel.style.display !== 'none' && pointInRect(x, y, panelRectCache)
+    const overInd = indicator.style.display !== 'none' && pointInRect(x, y, indRectCache)
     const video = overPanel ? null : videoAtPoint(x, y)
 
     if (video || overInd) {
@@ -886,6 +896,8 @@
     'scroll',
     () => {
       lastRectsTime = 0
+      panelRectCache = null
+      indRectCache = null
       scheduleIndicatorUpdate()
     },
     {
@@ -898,6 +910,8 @@
     'resize',
     () => {
       lastRectsTime = 0
+      panelRectCache = null
+      indRectCache = null
     },
     { passive: true },
   )
