@@ -218,6 +218,7 @@
       formatDuration,
       reflectEnabled,
       createVideoCard,
+      updateVideoCard,
       showMessage,
       openVideo,
       _setPort: (p) => { port = p }
