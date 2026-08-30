@@ -510,9 +510,9 @@
     }
     selectorRow.style.display = 'flex'
 
-    let snapshot = ''
-    for (let i = 0; i < videos.length; i++) {
-      if (i > 0) snapshot += ','
+    let snapshot = videoIds.get(videos[0])
+    for (let i = 1; i < videos.length; i++) {
+      snapshot += ','
       snapshot += videoIds.get(videos[i])
     }
     if (snapshot !== selectorSnapshot) {
