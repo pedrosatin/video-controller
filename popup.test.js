@@ -40,7 +40,10 @@ const {
   updateVideoCard,
   showMessage,
   openVideo,
+  renderVideos,
   _setPort,
+  _setFound,
+  _clearFound,
 } = require('./popup.js')
 
 describe('showMessage', () => {
@@ -397,5 +400,109 @@ describe('updateVideoCard', () => {
     updateVideoCard(card, video, 0)
 
     expect(card._vcVideo).toBe(video)
+  })
+})
+
+describe('renderVideos', () => {
+  let list
+
+  beforeEach(() => {
+    list = document.getElementById('video-list')
+    list.innerHTML = ''
+    _clearFound()
+  })
+
+  it('should show message when no videos are found', () => {
+    // Setup message element space if needed, showMessage appends it
+    renderVideos()
+
+    expect(list.innerHTML).toContain('No videos found on this page.')
+  })
+
+  it('should render new videos and remove the no-videos message', () => {
+    // Add no-videos message
+    list.innerHTML = '<div id="no-videos">No videos found</div>'
+
+    // Setup found videos
+    const vid1 = { frameToken: 'f1', id: 'v1', title: 'Video 1', duration: 10, paused: true }
+    const vid2 = { frameToken: 'f2', id: 'v2', title: 'Video 2', duration: 20, paused: false }
+    _setFound('f1:v1', vid1)
+    _setFound('f2:v2', vid2)
+
+    renderVideos()
+
+    expect(list.querySelector('#no-videos')).toBeNull()
+    expect(list.children.length).toBe(2)
+    expect(list.children[0].dataset.id).toBe('f1:v1')
+    expect(list.children[1].dataset.id).toBe('f2:v2')
+    expect(list.children[0].querySelector('.vc-name').textContent).toBe('Video 1')
+  })
+
+  it('should update existing video cards instead of recreating them', () => {
+    const vid1 = { frameToken: 'f1', id: 'v1', title: 'Video 1', duration: 10, paused: true }
+    _setFound('f1:v1', vid1)
+
+    // First render to create the element
+    renderVideos()
+    const firstRenderChild = list.children[0]
+    expect(firstRenderChild.querySelector('.vc-thumb').textContent).toBe('⏸')
+
+    // Update video info and render again
+    const updatedVid1 = { ...vid1, title: 'Updated Video 1', paused: false }
+    _setFound('f1:v1', updatedVid1)
+
+    renderVideos()
+
+    expect(list.children.length).toBe(1)
+    // The exact DOM node should be retained
+    expect(list.children[0]).toBe(firstRenderChild)
+    // The content should be updated
+    expect(list.children[0].querySelector('.vc-name').textContent).toBe('Updated Video 1')
+    expect(list.children[0].querySelector('.vc-thumb').textContent).toBe('▶')
+  })
+
+  it('should remove elements for videos no longer present', () => {
+    // Render initially with two videos
+    const vid1 = { frameToken: 'f1', id: 'v1', title: 'Video 1', duration: 10, paused: true }
+    const vid2 = { frameToken: 'f2', id: 'v2', title: 'Video 2', duration: 20, paused: false }
+    _setFound('f1:v1', vid1)
+    _setFound('f2:v2', vid2)
+    renderVideos()
+
+    expect(list.children.length).toBe(2)
+
+    // Remove one video and render again
+    _clearFound()
+    _setFound('f2:v2', vid2)
+    renderVideos()
+
+    expect(list.children.length).toBe(1)
+    expect(list.children[0].dataset.id).toBe('f2:v2')
+  })
+
+  it('should reorder existing video cards based on new order', () => {
+    const vid1 = { frameToken: 'f1', id: 'v1', title: 'Video 1', duration: 10, paused: true }
+    const vid2 = { frameToken: 'f2', id: 'v2', title: 'Video 2', duration: 20, paused: false }
+
+    _setFound('f1:v1', vid1)
+    _setFound('f2:v2', vid2)
+    renderVideos()
+
+    const node1 = list.children[0]
+    const node2 = list.children[1]
+
+    expect(node1.dataset.id).toBe('f1:v1')
+    expect(node2.dataset.id).toBe('f2:v2')
+
+    // Change order in the map (Map iterates in insertion order)
+    _clearFound()
+    _setFound('f2:v2', vid2)
+    _setFound('f1:v1', vid1)
+    renderVideos()
+
+    // Nodes should be reordered but retain their original instances
+    expect(list.children.length).toBe(2)
+    expect(list.children[0]).toBe(node2)
+    expect(list.children[1]).toBe(node1)
   })
 })
