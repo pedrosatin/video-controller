@@ -952,7 +952,6 @@
 
   const mutObs = new MutationObserver((mutations) => {
     let checkRemovals = false
-    let checkAdditions = false
 
     for (const m of mutations) {
       /* Ignore mutations of our own UI: rebuilding the selector options
@@ -960,20 +959,23 @@
          re-rebuild the selector — an infinite loop that freezes the page. */
       if (m.target === panel || panel.contains(m.target)) continue
 
-      if (!checkAdditions) {
-        for (let i = 0; i < m.addedNodes.length; i++) {
-          if (m.addedNodes[i].nodeType === Node.ELEMENT_NODE) {
-            checkAdditions = true
-            break
+      for (let i = 0; i < m.addedNodes.length; i++) {
+        const node = m.addedNodes[i]
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          if (node.tagName === 'VIDEO') {
+            registerVideo(node)
+          } else {
+            const vids = node.getElementsByTagName('video')
+            for (let j = 0; j < vids.length; j++) {
+              registerVideo(vids[j])
+            }
           }
         }
       }
+
       if (m.removedNodes.length > 0) checkRemovals = true
     }
 
-    if (checkAdditions) {
-      scanVideos()
-    }
     if (checkRemovals) {
       handleRemovals()
     }
