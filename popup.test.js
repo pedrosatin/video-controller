@@ -274,7 +274,7 @@ describe('openVideo', () => {
   it('should post message and close window after delay', () => {
     const video = { frameToken: 'frame-123', id: 'vid-abc' }
     const mockPort = {
-      postMessage: jest.fn()
+      postMessage: jest.fn(),
     }
     _setPort(mockPort)
 

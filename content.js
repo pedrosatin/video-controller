@@ -25,7 +25,16 @@
   // Object.defineProperty(videoElement, 'playbackRate', { set: locked }).
   // ══════════════════════════════════════════════════════════════════════════
   const _proto = HTMLMediaElement.prototype
-  const _desc = (prop) => Object.getOwnPropertyDescriptor(_proto, prop) || {}
+  const _descCache = Object.create(null)
+  const _desc = (prop) => {
+    // Disable caching in JSDOM tests where prototypes are frequently spied on and restored.
+    if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+      return Object.getOwnPropertyDescriptor(_proto, prop) || {}
+    }
+    return (
+      _descCache[prop] ?? (_descCache[prop] = Object.getOwnPropertyDescriptor(_proto, prop) || {})
+    )
+  }
   const _rawSet = (prop) => _desc(prop).set
   const _rawGet = (prop) => _desc(prop).get
 
