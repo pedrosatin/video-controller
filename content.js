@@ -1047,6 +1047,7 @@
       },
       _getUserRate: () => userRate,
       seek,
+      toggleLoop,
       togglePiP,
       togglePlay,
       setVolume,
