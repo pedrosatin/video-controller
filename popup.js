@@ -70,19 +70,30 @@
     }
   }
 
-  const cardTemplate = new DOMParser().parseFromString(
-    `
-      <div class="video-card">
-        <span class="vc-thumb"></span>
-        <div class="vc-info">
-          <div class="vc-name"></div>
-          <div class="vc-meta"></div>
-        </div>
-        <button class="vc-open-btn">Control</button>
-      </div>
-    `,
-    'text/html',
-  ).body.firstElementChild
+  const cardTemplate = document.createElement('div')
+  cardTemplate.className = 'video-card'
+
+  const thumb = document.createElement('span')
+  thumb.className = 'vc-thumb'
+  cardTemplate.appendChild(thumb)
+
+  const info = document.createElement('div')
+  info.className = 'vc-info'
+
+  const name = document.createElement('div')
+  name.className = 'vc-name'
+  info.appendChild(name)
+
+  const meta = document.createElement('div')
+  meta.className = 'vc-meta'
+  info.appendChild(meta)
+
+  cardTemplate.appendChild(info)
+
+  const btn = document.createElement('button')
+  btn.className = 'vc-open-btn'
+  btn.textContent = 'Control'
+  cardTemplate.appendChild(btn)
 
   function updateVideoCard(card, v, i) {
     const name = v.title || v.src || `Video ${i + 1}`
@@ -195,7 +206,7 @@
           title: String(v.title || ''),
           src: String(v.src || ''),
           duration: Number(v.duration) || 0,
-          paused: Boolean(v.paused)
+          paused: Boolean(v.paused),
         })
       }
       renderVideos()
@@ -227,7 +238,9 @@
       showMessage,
       openVideo,
       renderVideos,
-      _setPort: (p) => { port = p },
+      _setPort: (p) => {
+        port = p
+      },
       _setFound: (key, val) => found.set(key, val),
       _clearFound: () => found.clear(),
       _getFound: () => found,
