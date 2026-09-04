@@ -580,8 +580,6 @@ describe('setSpeed', () => {
   })
 })
 
-
-
 describe('changeSpeed', () => {
   let video
 
@@ -637,10 +635,10 @@ describe('seekTo', () => {
 
     // We need to store the requested currentTime to test _set
     let currentVal = 10
-    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set').mockImplementation(function(val) {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set').mockImplementation(function (val) {
       currentVal = val
     })
-    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockImplementation(function() {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockImplementation(function () {
       return currentVal
     })
 
