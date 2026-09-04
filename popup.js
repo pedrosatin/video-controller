@@ -195,7 +195,7 @@
           title: String(v.title || ''),
           src: String(v.src || ''),
           duration: Number(v.duration) || 0,
-          paused: Boolean(v.paused)
+          paused: Boolean(v.paused),
         })
       }
       renderVideos()
@@ -227,7 +227,10 @@
       showMessage,
       openVideo,
       renderVideos,
-      _setPort: (p) => { port = p },
+      bindVideoCardEvents,
+      _setPort: (p) => {
+        port = p
+      },
       _setFound: (key, val) => found.set(key, val),
       _clearFound: () => found.clear(),
       _getFound: () => found,
