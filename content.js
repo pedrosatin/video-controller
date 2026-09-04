@@ -612,9 +612,7 @@
     if (panel.style.display !== 'none') hidePanel()
   }
 
-  function bindPanelEvents() {
-    closeBtn.addEventListener('click', hidePanel)
-
+  function bindDragEvents() {
     /* Pin toggle – when pinned the panel is not draggable */
     let isPinned = false
     pinBtn.addEventListener('click', () => {
@@ -653,10 +651,9 @@
       dragState = null
       panel.classList.remove('vc-dragging')
     })
+  }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // BUTTON WIRING
-    // ══════════════════════════════════════════════════════════════════════════
+  function bindButtonEvents() {
     playBtn.addEventListener('click', togglePlay)
 
     ;[
@@ -696,7 +693,9 @@
     q('#vc-fullscreen-btn').addEventListener('click', toggleFullscreen)
     q('#vc-pip-btn').addEventListener('click', togglePiP)
     loopBtn.addEventListener('click', toggleLoop)
+  }
 
+  function bindGlobalEvents() {
     document.addEventListener('fullscreenchange', () => {
       updateFullscreenBtn()
       if (POPOVER_OK) {
@@ -730,10 +729,9 @@
       },
       true,
     )
+  }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // KEYBOARD SHORTCUTS (active only while the panel is open)
-    // ══════════════════════════════════════════════════════════════════════════
+  function bindKeyboardEvents() {
     const IGNORED_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
 
     const KEY_HANDLERS = {
@@ -777,6 +775,14 @@
       },
       true,
     )
+  }
+
+  function bindPanelEvents() {
+    closeBtn.addEventListener('click', hidePanel)
+    bindDragEvents()
+    bindButtonEvents()
+    bindGlobalEvents()
+    bindKeyboardEvents()
   }
 
   bindPanelEvents()
