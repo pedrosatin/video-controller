@@ -4,39 +4,42 @@
 
 describe('panelTemplate.js', () => {
   beforeEach(() => {
-    delete window.VC_PANEL_TEMPLATE;
-    jest.resetModules();
-  });
+    delete window.createPanelDOM
+    jest.resetModules()
+  })
 
-  it('exports VC_PANEL_TEMPLATE to window and module.exports', () => {
-    const moduleExports = require('./panelTemplate.js');
+  it('exports createPanelDOM to window and module.exports', () => {
+    const moduleExports = require('./panelTemplate.js')
 
-    expect(moduleExports).toBeDefined();
-    expect(typeof moduleExports.VC_PANEL_TEMPLATE).toBe('string');
+    expect(moduleExports).toBeDefined()
+    expect(typeof moduleExports.createPanelDOM).toBe('function')
 
-    expect(window.VC_PANEL_TEMPLATE).toBeDefined();
-    expect(typeof window.VC_PANEL_TEMPLATE).toBe('string');
+    expect(window.createPanelDOM).toBeDefined()
+    expect(typeof window.createPanelDOM).toBe('function')
 
-    expect(moduleExports.VC_PANEL_TEMPLATE).toBe(window.VC_PANEL_TEMPLATE);
-  });
+    expect(moduleExports.createPanelDOM).toBe(window.createPanelDOM)
+  })
 
-  it('contains expected HTML structure and IDs', () => {
-    const { VC_PANEL_TEMPLATE } = require('./panelTemplate.js');
+  it('contains expected DOM structure and IDs', () => {
+    const { createPanelDOM } = require('./panelTemplate.js')
+    const frag = createPanelDOM()
 
     const expectedIds = [
-      'id="vc-header"',
-      'id="vc-video-sel"',
-      'id="vc-play-pause"',
-      'id="vc-progress"',
-      'id="vc-mute-btn"',
-      'id="vc-vol-slider"',
-      'id="vc-fullscreen-btn"',
-      'id="vc-pip-btn"',
-      'id="vc-loop-btn"'
-    ];
+      'vc-header',
+      'vc-video-sel',
+      'vc-play-pause',
+      'vc-progress',
+      'vc-mute-btn',
+      'vc-vol-slider',
+      'vc-fullscreen-btn',
+      'vc-pip-btn',
+      'vc-loop-btn',
+    ]
 
-    expectedIds.forEach(id => {
-      expect(VC_PANEL_TEMPLATE).toContain(id);
-    });
-  });
-});
+    expectedIds.forEach((id) => {
+      // DocumentFragment supports getElementById in modern browsers/jsdom
+      // but if not we can use querySelector
+      expect(frag.querySelector(`#${id}`)).not.toBeNull()
+    })
+  })
+})
