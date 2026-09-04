@@ -153,8 +153,10 @@
     })
 
     /* Remove elements no longer present */
-    for (const child of existingMap.values()) {
-      list.removeChild(child)
+    if (existingMap.size > 0) {
+      for (const child of existingMap.values()) {
+        list.removeChild(child)
+      }
     }
 
     /* Reorder and append new ones */
