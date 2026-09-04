@@ -44,6 +44,7 @@ const {
   _setPort,
   _setFound,
   _clearFound,
+  _getCardVideo,
 } = require('./popup.js')
 
 describe('showMessage', () => {
@@ -274,7 +275,7 @@ describe('openVideo', () => {
   it('should post message and close window after delay', () => {
     const video = { frameToken: 'frame-123', id: 'vid-abc' }
     const mockPort = {
-      postMessage: jest.fn()
+      postMessage: jest.fn(),
     }
     _setPort(mockPort)
 
@@ -394,12 +395,12 @@ describe('updateVideoCard', () => {
     expect(card.querySelector('.vc-meta').textContent).toBe('Duration unknown')
   })
 
-  it('should update the _vcVideo reference on the card', () => {
+  it('should update the active video reference using cardVideos', () => {
     const video = { title: 'New Vid', duration: 50, paused: true, frameToken: 'frame2', id: 'vid2' }
 
     updateVideoCard(card, video, 0)
 
-    expect(card._vcVideo).toBe(video)
+    expect(_getCardVideo(card)).toBe(video)
   })
 })
 
