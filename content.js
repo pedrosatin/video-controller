@@ -234,9 +234,7 @@
   panel.setAttribute('role', 'dialog')
   panel.setAttribute('aria-label', 'Video Controller')
 
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(window.VC_PANEL_TEMPLATE, 'text/html')
-  panel.append(...doc.body.childNodes)
+  panel.appendChild(window.createPanelDOM())
 
   // Populate dynamic button properties safely
   const btnBackLarge = panel.querySelector('#vc-back-large')
