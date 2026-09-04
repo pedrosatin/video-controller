@@ -41,6 +41,7 @@ const {
   showMessage,
   openVideo,
   renderVideos,
+  bindVideoCardEvents,
   _setPort,
   _setFound,
   _clearFound,
@@ -274,7 +275,7 @@ describe('openVideo', () => {
   it('should post message and close window after delay', () => {
     const video = { frameToken: 'frame-123', id: 'vid-abc' }
     const mockPort = {
-      postMessage: jest.fn()
+      postMessage: jest.fn(),
     }
     _setPort(mockPort)
 
@@ -504,5 +505,115 @@ describe('renderVideos', () => {
     expect(list.children.length).toBe(2)
     expect(list.children[0]).toBe(node2)
     expect(list.children[1]).toBe(node1)
+  })
+})
+
+describe('bindVideoCardEvents', () => {
+  let card
+  let btn
+  let video
+
+  beforeEach(() => {
+    card = document.createElement('div')
+    btn = document.createElement('button')
+    card.appendChild(btn)
+    video = { frameToken: 'frame-1', id: 'vid-1' }
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('should bind click event to the button that opens the video and stops propagation', () => {
+    const stopPropagationSpy = jest.fn()
+    const clickEvent = new MouseEvent('click')
+    clickEvent.stopPropagation = stopPropagationSpy
+
+    // Mock openVideo to verify it is called, openVideo uses window.close
+    // But since it's an internal function not exported directly for overriding in the module,
+    // we should instead mock port.postMessage via _setPort
+    const mockPort = { postMessage: jest.fn() }
+    _setPort(mockPort)
+    jest.useFakeTimers()
+    jest.spyOn(window, 'close').mockImplementation(() => {})
+
+    bindVideoCardEvents(card, btn, video)
+
+    btn.dispatchEvent(clickEvent)
+
+    expect(stopPropagationSpy).toHaveBeenCalled()
+    expect(mockPort.postMessage).toHaveBeenCalledWith({
+      type: 'OPEN_VIDEO',
+      frameToken: 'frame-1',
+      id: 'vid-1',
+    })
+
+    jest.useRealTimers()
+    _setPort(null)
+  })
+
+  it('should bind click event to the card that opens the video', () => {
+    const mockPort = { postMessage: jest.fn() }
+    _setPort(mockPort)
+    jest.useFakeTimers()
+    jest.spyOn(window, 'close').mockImplementation(() => {})
+
+    bindVideoCardEvents(card, btn, video)
+
+    card.dispatchEvent(new MouseEvent('click'))
+
+    expect(mockPort.postMessage).toHaveBeenCalledWith({
+      type: 'OPEN_VIDEO',
+      frameToken: 'frame-1',
+      id: 'vid-1',
+    })
+
+    jest.useRealTimers()
+    _setPort(null)
+  })
+
+  it('should not bind events multiple times', () => {
+    const mockPort = { postMessage: jest.fn() }
+    _setPort(mockPort)
+    jest.useFakeTimers()
+    jest.spyOn(window, 'close').mockImplementation(() => {})
+
+    bindVideoCardEvents(card, btn, video)
+    bindVideoCardEvents(card, btn, video) // Second call
+
+    card.dispatchEvent(new MouseEvent('click'))
+
+    // Should only be called once, not twice, if the events aren't duplicated.
+    // Actually, wait, if we dispatch a click, it will call all bound listeners.
+    // Since bindVideoCardEvents checks !card._vcBound, it shouldn't add a second listener.
+    expect(mockPort.postMessage).toHaveBeenCalledTimes(1)
+
+    jest.useRealTimers()
+    _setPort(null)
+  })
+
+  it('should update _vcVideo reference on subsequent calls without rebinding', () => {
+    const mockPort = { postMessage: jest.fn() }
+    _setPort(mockPort)
+    jest.useFakeTimers()
+    jest.spyOn(window, 'close').mockImplementation(() => {})
+
+    bindVideoCardEvents(card, btn, video)
+
+    const newVideo = { frameToken: 'frame-2', id: 'vid-2' }
+    bindVideoCardEvents(card, btn, newVideo)
+
+    expect(card._vcVideo).toBe(newVideo)
+
+    card.dispatchEvent(new MouseEvent('click'))
+
+    expect(mockPort.postMessage).toHaveBeenCalledWith({
+      type: 'OPEN_VIDEO',
+      frameToken: 'frame-2',
+      id: 'vid-2',
+    })
+
+    jest.useRealTimers()
+    _setPort(null)
   })
 })
