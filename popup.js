@@ -89,13 +89,15 @@
     const dur = formatDuration(v.duration)
     const state = v.paused ? '⏸' : '▶'
 
-    card.querySelector('.vc-thumb').textContent = state
+    if (!card._vcThumb) card._vcThumb = card.querySelector('.vc-thumb')
+    card._vcThumb.textContent = state
 
-    const nameEl = card.querySelector('.vc-name')
-    nameEl.textContent = name
-    nameEl.title = name
+    if (!card._vcName) card._vcName = card.querySelector('.vc-name')
+    card._vcName.textContent = name
+    card._vcName.title = name
 
-    card.querySelector('.vc-meta').textContent = dur ? `Duration: ${dur}` : 'Duration unknown'
+    if (!card._vcMeta) card._vcMeta = card.querySelector('.vc-meta')
+    card._vcMeta.textContent = dur ? `Duration: ${dur}` : 'Duration unknown'
 
     // Update the video reference for events
     card._vcVideo = v
@@ -195,7 +197,7 @@
           title: String(v.title || ''),
           src: String(v.src || ''),
           duration: Number(v.duration) || 0,
-          paused: Boolean(v.paused)
+          paused: Boolean(v.paused),
         })
       }
       renderVideos()
@@ -227,7 +229,9 @@
       showMessage,
       openVideo,
       renderVideos,
-      _setPort: (p) => { port = p },
+      _setPort: (p) => {
+        port = p
+      },
       _setFound: (key, val) => found.set(key, val),
       _clearFound: () => found.clear(),
       _getFound: () => found,
