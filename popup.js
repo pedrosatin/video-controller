@@ -49,11 +49,10 @@
   }
 
   function showMessage(text) {
-    while (list.firstChild) list.removeChild(list.firstChild)
     const p = document.createElement('p')
     p.id = 'no-videos'
     p.textContent = text
-    list.appendChild(p)
+    list.replaceChildren(p)
   }
 
   function bindVideoCardEvents(card, btn, v) {
@@ -195,7 +194,7 @@
           title: String(v.title || ''),
           src: String(v.src || ''),
           duration: Number(v.duration) || 0,
-          paused: Boolean(v.paused)
+          paused: Boolean(v.paused),
         })
       }
       renderVideos()
@@ -227,7 +226,9 @@
       showMessage,
       openVideo,
       renderVideos,
-      _setPort: (p) => { port = p },
+      _setPort: (p) => {
+        port = p
+      },
       _setFound: (key, val) => found.set(key, val),
       _clearFound: () => found.clear(),
       _getFound: () => found,

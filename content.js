@@ -489,12 +489,11 @@
     selectorSnapshot = snapshot
     /* Build <option> elements with DOM APIs to avoid XSS via untrusted
        video metadata (title, aria-label, currentSrc). */
-    while (videoSel.firstChild) videoSel.removeChild(videoSel.firstChild)
     const fragment = document.createDocumentFragment()
     videos.forEach((v, i) => {
       fragment.appendChild(createVideoOption(v, i))
     })
-    videoSel.appendChild(fragment)
+    videoSel.replaceChildren(fragment)
   }
 
   function refreshVideoSelector() {
