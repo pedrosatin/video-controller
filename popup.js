@@ -19,6 +19,9 @@
   const found = new Map() /* "frameToken:id" -> video info */
   let port = null
 
+  const cardVideos = new WeakMap()
+  const cardBound = new WeakSet()
+
   document.getElementById('version').textContent = `v${chrome.runtime.getManifest().version}`
 
   /* Master enable/disable switch, persisted in chrome.storage.local.
@@ -57,15 +60,15 @@
 
   function bindVideoCardEvents(card, btn, v) {
     // Clear old listeners by replacing elements with clones if needed, or simply handle it.
-    // Instead of replacing the whole element, we'll store a reference to the current video object on the element.
-    card._vcVideo = v
-    if (!card._vcBound) {
-      card._vcBound = true
+    // Instead of replacing the whole element, we'll store a reference to the current video object using a WeakMap.
+    cardVideos.set(card, v)
+    if (!cardBound.has(card)) {
+      cardBound.add(card)
       btn.addEventListener('click', (e) => {
         e.stopPropagation()
-        openVideo(card._vcVideo)
+        openVideo(cardVideos.get(card))
       })
-      card.addEventListener('click', () => openVideo(card._vcVideo))
+      card.addEventListener('click', () => openVideo(cardVideos.get(card)))
     }
   }
 
@@ -97,7 +100,7 @@
     card.querySelector('.vc-meta').textContent = dur ? `Duration: ${dur}` : 'Duration unknown'
 
     // Update the video reference for events
-    card._vcVideo = v
+    cardVideos.set(card, v)
   }
 
   function createVideoCard(v, i) {
@@ -233,6 +236,7 @@
       _setFound: (key, val) => found.set(key, val),
       _clearFound: () => found.clear(),
       _getFound: () => found,
+      _getCardVideo: (card) => cardVideos.get(card),
     }
   }
 })()
