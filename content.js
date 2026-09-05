@@ -239,37 +239,23 @@
   panel.append(...doc.body.childNodes)
 
   // Populate dynamic button properties safely
-  const btnBackLarge = panel.querySelector('#vc-back-large')
-  btnBackLarge.title = `Back ${SEEK_LARGE} s`
-  btnBackLarge.textContent = `−${SEEK_LARGE}s`
+  const initBtn = (id, title, text) => {
+    const btn = panel.querySelector(id)
+    if (btn) {
+      btn.title = title
+      btn.textContent = text
+    }
+  }
 
-  const btnBackSmall = panel.querySelector('#vc-back-small')
-  btnBackSmall.title = `Back ${SEEK_SMALL} s`
-  btnBackSmall.textContent = `−${SEEK_SMALL}s`
+  initBtn('#vc-back-large', `Back ${SEEK_LARGE} s`, `−${SEEK_LARGE}s`)
+  initBtn('#vc-back-small', `Back ${SEEK_SMALL} s`, `−${SEEK_SMALL}s`)
+  initBtn('#vc-fwd-small', `Forward ${SEEK_SMALL} s`, `+${SEEK_SMALL}s`)
+  initBtn('#vc-fwd-large', `Forward ${SEEK_LARGE} s`, `+${SEEK_LARGE}s`)
 
-  const btnFwdSmall = panel.querySelector('#vc-fwd-small')
-  btnFwdSmall.title = `Forward ${SEEK_SMALL} s`
-  btnFwdSmall.textContent = `+${SEEK_SMALL}s`
-
-  const btnFwdLarge = panel.querySelector('#vc-fwd-large')
-  btnFwdLarge.title = `Forward ${SEEK_LARGE} s`
-  btnFwdLarge.textContent = `+${SEEK_LARGE}s`
-
-  const btnSpdMC = panel.querySelector('#vc-spd-m-c')
-  btnSpdMC.title = `−${SPEED_COARSE}×`
-  btnSpdMC.textContent = `−${SPEED_COARSE}`
-
-  const btnSpdMF = panel.querySelector('#vc-spd-m-f')
-  btnSpdMF.title = `−${SPEED_FINE}×`
-  btnSpdMF.textContent = `−${SPEED_FINE}`
-
-  const btnSpdPF = panel.querySelector('#vc-spd-p-f')
-  btnSpdPF.title = `+${SPEED_FINE}×`
-  btnSpdPF.textContent = `+${SPEED_FINE}`
-
-  const btnSpdPC = panel.querySelector('#vc-spd-p-c')
-  btnSpdPC.title = `+${SPEED_COARSE}×`
-  btnSpdPC.textContent = `+${SPEED_COARSE}`
+  initBtn('#vc-spd-m-c', `−${SPEED_COARSE}×`, `−${SPEED_COARSE}`)
+  initBtn('#vc-spd-m-f', `−${SPEED_FINE}×`, `−${SPEED_FINE}`)
+  initBtn('#vc-spd-p-f', `+${SPEED_FINE}×`, `+${SPEED_FINE}`)
+  initBtn('#vc-spd-p-c', `+${SPEED_COARSE}×`, `+${SPEED_COARSE}`)
 
   const presetsRow = panel.querySelector('#vc-presets-row')
   for (const s of SPEED_PRESETS) {
