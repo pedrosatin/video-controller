@@ -361,6 +361,8 @@
   const loopBtn = q('#vc-loop-btn')
   const selectorRow = q('#vc-selector-row')
   const videoSel = q('#vc-video-sel')
+  const fsBtn = q('#vc-fullscreen-btn')
+  const pipBtn = q('#vc-pip-btn')
   const presetBtns = q('#vc-presets-row').querySelectorAll('.vc-preset-btn')
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -406,14 +408,12 @@
   })
 
   function updateFullscreenBtn() {
-    const fsBtn = q('#vc-fullscreen-btn')
     const inFs = !!document.fullscreenElement
     fsBtn.textContent = inFs ? '⊡ Exit FS' : '⛶ Full'
     fsBtn.title = `${inFs ? 'Exit' : 'Toggle'} Fullscreen (F)`
   }
 
   function updatePipBtn() {
-    const pipBtn = q('#vc-pip-btn')
     const inPip = document.pictureInPictureElement === activeVideo
     pipBtn.classList.toggle('vc-btn-active', inPip)
     pipBtn.title = `${inPip ? 'Exit' : 'Enter'} Picture in Picture (P)`
