@@ -49,11 +49,10 @@
   }
 
   function showMessage(text) {
-    while (list.firstChild) list.removeChild(list.firstChild)
     const p = document.createElement('p')
     p.id = 'no-videos'
     p.textContent = text
-    list.appendChild(p)
+    list.replaceChildren(p)
   }
 
   function bindVideoCardEvents(card, btn, v) {
