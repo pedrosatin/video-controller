@@ -239,37 +239,23 @@
   panel.append(...doc.body.childNodes)
 
   // Populate dynamic button properties safely
-  const btnBackLarge = panel.querySelector('#vc-back-large')
-  btnBackLarge.title = `Back ${SEEK_LARGE} s`
-  btnBackLarge.textContent = `−${SEEK_LARGE}s`
+  const initBtn = (id, title, text) => {
+    const btn = panel.querySelector(id)
+    if (btn) {
+      btn.title = title
+      btn.textContent = text
+    }
+  }
 
-  const btnBackSmall = panel.querySelector('#vc-back-small')
-  btnBackSmall.title = `Back ${SEEK_SMALL} s`
-  btnBackSmall.textContent = `−${SEEK_SMALL}s`
+  initBtn('#vc-back-large', `Back ${SEEK_LARGE} s`, `−${SEEK_LARGE}s`)
+  initBtn('#vc-back-small', `Back ${SEEK_SMALL} s`, `−${SEEK_SMALL}s`)
+  initBtn('#vc-fwd-small', `Forward ${SEEK_SMALL} s`, `+${SEEK_SMALL}s`)
+  initBtn('#vc-fwd-large', `Forward ${SEEK_LARGE} s`, `+${SEEK_LARGE}s`)
 
-  const btnFwdSmall = panel.querySelector('#vc-fwd-small')
-  btnFwdSmall.title = `Forward ${SEEK_SMALL} s`
-  btnFwdSmall.textContent = `+${SEEK_SMALL}s`
-
-  const btnFwdLarge = panel.querySelector('#vc-fwd-large')
-  btnFwdLarge.title = `Forward ${SEEK_LARGE} s`
-  btnFwdLarge.textContent = `+${SEEK_LARGE}s`
-
-  const btnSpdMC = panel.querySelector('#vc-spd-m-c')
-  btnSpdMC.title = `−${SPEED_COARSE}×`
-  btnSpdMC.textContent = `−${SPEED_COARSE}`
-
-  const btnSpdMF = panel.querySelector('#vc-spd-m-f')
-  btnSpdMF.title = `−${SPEED_FINE}×`
-  btnSpdMF.textContent = `−${SPEED_FINE}`
-
-  const btnSpdPF = panel.querySelector('#vc-spd-p-f')
-  btnSpdPF.title = `+${SPEED_FINE}×`
-  btnSpdPF.textContent = `+${SPEED_FINE}`
-
-  const btnSpdPC = panel.querySelector('#vc-spd-p-c')
-  btnSpdPC.title = `+${SPEED_COARSE}×`
-  btnSpdPC.textContent = `+${SPEED_COARSE}`
+  initBtn('#vc-spd-m-c', `−${SPEED_COARSE}×`, `−${SPEED_COARSE}`)
+  initBtn('#vc-spd-m-f', `−${SPEED_FINE}×`, `−${SPEED_FINE}`)
+  initBtn('#vc-spd-p-f', `+${SPEED_FINE}×`, `+${SPEED_FINE}`)
+  initBtn('#vc-spd-p-c', `+${SPEED_COARSE}×`, `+${SPEED_COARSE}`)
 
   const presetsRow = panel.querySelector('#vc-presets-row')
   for (const s of SPEED_PRESETS) {
@@ -361,6 +347,8 @@
   const loopBtn = q('#vc-loop-btn')
   const selectorRow = q('#vc-selector-row')
   const videoSel = q('#vc-video-sel')
+  const fsBtn = q('#vc-fullscreen-btn')
+  const pipBtn = q('#vc-pip-btn')
   const presetBtns = q('#vc-presets-row').querySelectorAll('.vc-preset-btn')
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -406,14 +394,12 @@
   })
 
   function updateFullscreenBtn() {
-    const fsBtn = q('#vc-fullscreen-btn')
     const inFs = !!document.fullscreenElement
     fsBtn.textContent = inFs ? '⊡ Exit FS' : '⛶ Full'
     fsBtn.title = `${inFs ? 'Exit' : 'Toggle'} Fullscreen (F)`
   }
 
   function updatePipBtn() {
-    const pipBtn = q('#vc-pip-btn')
     const inPip = document.pictureInPictureElement === activeVideo
     pipBtn.classList.toggle('vc-btn-active', inPip)
     pipBtn.title = `${inPip ? 'Exit' : 'Enter'} Picture in Picture (P)`
@@ -489,12 +475,11 @@
     selectorSnapshot = snapshot
     /* Build <option> elements with DOM APIs to avoid XSS via untrusted
        video metadata (title, aria-label, currentSrc). */
-    while (videoSel.firstChild) videoSel.removeChild(videoSel.firstChild)
     const fragment = document.createDocumentFragment()
     videos.forEach((v, i) => {
       fragment.appendChild(createVideoOption(v, i))
     })
-    videoSel.appendChild(fragment)
+    videoSel.replaceChildren(fragment)
   }
 
   function refreshVideoSelector() {
@@ -612,9 +597,7 @@
     if (panel.style.display !== 'none') hidePanel()
   }
 
-  function bindPanelEvents() {
-    closeBtn.addEventListener('click', hidePanel)
-
+  function bindDragEvents() {
     /* Pin toggle – when pinned the panel is not draggable */
     let isPinned = false
     pinBtn.addEventListener('click', () => {
@@ -653,10 +636,9 @@
       dragState = null
       panel.classList.remove('vc-dragging')
     })
+  }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // BUTTON WIRING
-    // ══════════════════════════════════════════════════════════════════════════
+  function bindButtonEvents() {
     playBtn.addEventListener('click', togglePlay)
 
     ;[
@@ -696,7 +678,9 @@
     q('#vc-fullscreen-btn').addEventListener('click', toggleFullscreen)
     q('#vc-pip-btn').addEventListener('click', togglePiP)
     loopBtn.addEventListener('click', toggleLoop)
+  }
 
+  function bindGlobalEvents() {
     document.addEventListener('fullscreenchange', () => {
       updateFullscreenBtn()
       if (POPOVER_OK) {
@@ -730,10 +714,9 @@
       },
       true,
     )
+  }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // KEYBOARD SHORTCUTS (active only while the panel is open)
-    // ══════════════════════════════════════════════════════════════════════════
+  function bindKeyboardEvents() {
     const IGNORED_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
 
     const KEY_HANDLERS = {
@@ -777,6 +760,14 @@
       },
       true,
     )
+  }
+
+  function bindPanelEvents() {
+    closeBtn.addEventListener('click', hidePanel)
+    bindDragEvents()
+    bindButtonEvents()
+    bindGlobalEvents()
+    bindKeyboardEvents()
   }
 
   bindPanelEvents()
@@ -952,14 +943,14 @@
          re-rebuild the selector — an infinite loop that freezes the page. */
       if (m.target === panel || panel.contains(m.target)) continue
 
-      for (let i = 0; i < m.addedNodes.length; i++) {
+      for (let i = 0, len = m.addedNodes.length; i < len; i++) {
         const node = m.addedNodes[i]
         if (node.nodeType === Node.ELEMENT_NODE) {
           if (node.tagName === 'VIDEO') {
             registerVideo(node)
           } else {
             const vids = node.getElementsByTagName('video')
-            for (let j = 0; j < vids.length; j++) {
+            for (let j = 0, vLen = vids.length; j < vLen; j++) {
               registerVideo(vids[j])
             }
           }
@@ -1054,6 +1045,9 @@
       toggleFullscreen,
       attachVideo,
       hidePanel,
+      showIndicatorEl,
+      hideIndicatorEl,
+      _getIndicator: () => indicator,
       applyEnabled,
       promoteToTopLayer,
       videoSummaries,

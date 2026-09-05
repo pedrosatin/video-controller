@@ -47,6 +47,8 @@ const {
   attachVideo,
   hidePanel,
   promoteToTopLayer,
+  hideIndicatorEl,
+  _getIndicator,
   videoSummaries,
   scanVideos,
   FRAME_TOKEN,
@@ -580,8 +582,6 @@ describe('setSpeed', () => {
   })
 })
 
-
-
 describe('changeSpeed', () => {
   let video
 
@@ -637,10 +637,10 @@ describe('seekTo', () => {
 
     // We need to store the requested currentTime to test _set
     let currentVal = 10
-    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set').mockImplementation(function(val) {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'set').mockImplementation(function (val) {
       currentVal = val
     })
-    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockImplementation(function() {
+    jest.spyOn(HTMLMediaElement.prototype, 'currentTime', 'get').mockImplementation(function () {
       return currentVal
     })
 
@@ -1221,5 +1221,27 @@ describe('seek', () => {
     seek(15)
 
     expect(setTimeSpy).toHaveBeenCalledWith(105)
+  })
+})
+
+describe('hideIndicatorEl', () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('hides the indicator and calls dropFromTopLayer', () => {
+    const indicator = _getIndicator()
+
+    // Set initial state
+    indicator.style.display = 'flex'
+
+    // We want to mock dropFromTopLayer, but it's internal.
+    // dropFromTopLayer calls safeHidePopover which calls hidePopover.
+    const hidePopoverSpy = jest.spyOn(HTMLElement.prototype, 'hidePopover')
+
+    hideIndicatorEl()
+
+    expect(indicator.style.display).toBe('none')
+    expect(hidePopoverSpy).toHaveBeenCalled()
   })
 })
