@@ -43,6 +43,7 @@ const {
   _getUserRate,
   togglePlay,
   setVolume,
+  toggleLoop,
   togglePiP,
   attachVideo,
   hidePanel,
@@ -998,6 +999,36 @@ describe('togglePlay', () => {
     togglePlay()
 
     expect(pauseSpy).toHaveBeenCalled()
+  })
+})
+
+describe('toggleLoop', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    _setActiveVideo(video)
+  })
+
+  afterEach(() => {
+    _setActiveVideo(null)
+  })
+
+  it('does nothing if there is no active video', () => {
+    _setActiveVideo(null)
+    expect(() => toggleLoop()).not.toThrow()
+  })
+
+  it('toggles loop to true when it is false', () => {
+    video.loop = false
+    toggleLoop()
+    expect(video.loop).toBe(true)
+  })
+
+  it('toggles loop to false when it is true', () => {
+    video.loop = true
+    toggleLoop()
+    expect(video.loop).toBe(false)
   })
 })
 
