@@ -226,6 +226,7 @@
       showMessage,
       openVideo,
       renderVideos,
+      bindVideoCardEvents,
       _setPort: (p) => {
         port = p
       },
