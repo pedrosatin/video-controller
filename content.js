@@ -952,14 +952,14 @@
          re-rebuild the selector — an infinite loop that freezes the page. */
       if (m.target === panel || panel.contains(m.target)) continue
 
-      for (let i = 0; i < m.addedNodes.length; i++) {
+      for (let i = 0, len = m.addedNodes.length; i < len; i++) {
         const node = m.addedNodes[i]
         if (node.nodeType === Node.ELEMENT_NODE) {
           if (node.tagName === 'VIDEO') {
             registerVideo(node)
           } else {
             const vids = node.getElementsByTagName('video')
-            for (let j = 0; j < vids.length; j++) {
+            for (let j = 0, vLen = vids.length; j < vLen; j++) {
               registerVideo(vids[j])
             }
           }
