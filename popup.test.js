@@ -45,6 +45,7 @@ const {
   _setPort,
   _setFound,
   _clearFound,
+  _getCardVideo,
 } = require('./popup.js')
 
 describe('showMessage', () => {
@@ -395,12 +396,12 @@ describe('updateVideoCard', () => {
     expect(card.querySelector('.vc-meta').textContent).toBe('Duration unknown')
   })
 
-  it('should update the _vcVideo reference on the card', () => {
+  it('should update the active video reference using cardVideos', () => {
     const video = { title: 'New Vid', duration: 50, paused: true, frameToken: 'frame2', id: 'vid2' }
 
     updateVideoCard(card, video, 0)
 
-    expect(card._vcVideo).toBe(video)
+    expect(_getCardVideo(card)).toBe(video)
   })
 })
 
@@ -592,7 +593,7 @@ describe('bindVideoCardEvents', () => {
     _setPort(null)
   })
 
-  it('should update _vcVideo reference on subsequent calls without rebinding', () => {
+  it('should update the video reference on subsequent calls without rebinding', () => {
     const mockPort = { postMessage: jest.fn() }
     _setPort(mockPort)
     jest.useFakeTimers()
@@ -603,10 +604,10 @@ describe('bindVideoCardEvents', () => {
     const newVideo = { frameToken: 'frame-2', id: 'vid-2' }
     bindVideoCardEvents(card, btn, newVideo)
 
-    expect(card._vcVideo).toBe(newVideo)
-
     card.dispatchEvent(new MouseEvent('click'))
 
+    /* A single listener stays bound and reads the latest video reference. */
+    expect(mockPort.postMessage).toHaveBeenCalledTimes(1)
     expect(mockPort.postMessage).toHaveBeenCalledWith({
       type: 'OPEN_VIDEO',
       frameToken: 'frame-2',
