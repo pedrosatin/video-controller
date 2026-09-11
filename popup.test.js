@@ -41,6 +41,7 @@ const {
   showMessage,
   openVideo,
   renderVideos,
+  diffVideoCards,
   bindVideoCardEvents,
   _setPort,
   _setFound,
@@ -616,5 +617,76 @@ describe('bindVideoCardEvents', () => {
 
     jest.useRealTimers()
     _setPort(null)
+  })
+})
+
+describe('diffVideoCards', () => {
+  let list
+
+  beforeEach(() => {
+    list = document.getElementById('video-list')
+    list.innerHTML = ''
+    _clearFound()
+  })
+
+  it('should create new video cards when none exist', () => {
+    const videos = [
+      { frameToken: 'f1', id: 'v1', title: 'Video 1', duration: 10, paused: true },
+      { frameToken: 'f2', id: 'v2', title: 'Video 2', duration: 20, paused: false }
+    ]
+    diffVideoCards(videos)
+    expect(list.children.length).toBe(2)
+    expect(list.children[0].dataset.id).toBe('f1:v1')
+    expect(list.children[1].dataset.id).toBe('f2:v2')
+  })
+
+  it('should update existing video cards without recreating them', () => {
+    // Initial creation
+    const videos = [{ frameToken: 'f1', id: 'v1', title: 'Video 1', duration: 10, paused: true }]
+    diffVideoCards(videos)
+    const originalNode = list.children[0]
+    expect(originalNode.querySelector('.vc-name').textContent).toBe('Video 1')
+
+    // Update
+    const updatedVideos = [{ frameToken: 'f1', id: 'v1', title: 'Updated Video 1', duration: 10, paused: false }]
+    diffVideoCards(updatedVideos)
+    expect(list.children.length).toBe(1)
+    expect(list.children[0]).toBe(originalNode) // DOM node preserved
+    expect(list.children[0].querySelector('.vc-name').textContent).toBe('Updated Video 1')
+  })
+
+  it('should remove video cards that are no longer present', () => {
+    const videos = [
+      { frameToken: 'f1', id: 'v1', title: 'Video 1', duration: 10, paused: true },
+      { frameToken: 'f2', id: 'v2', title: 'Video 2', duration: 20, paused: false }
+    ]
+    diffVideoCards(videos)
+    expect(list.children.length).toBe(2)
+
+    // Remove one video
+    const reducedVideos = [{ frameToken: 'f2', id: 'v2', title: 'Video 2', duration: 20, paused: false }]
+    diffVideoCards(reducedVideos)
+    expect(list.children.length).toBe(1)
+    expect(list.children[0].dataset.id).toBe('f2:v2')
+  })
+
+  it('should reorder existing video cards to match the new array order', () => {
+    const videos = [
+      { frameToken: 'f1', id: 'v1', title: 'Video 1', duration: 10, paused: true },
+      { frameToken: 'f2', id: 'v2', title: 'Video 2', duration: 20, paused: false }
+    ]
+    diffVideoCards(videos)
+    const node1 = list.children[0]
+    const node2 = list.children[1]
+
+    // Reverse order
+    const reversedVideos = [
+      { frameToken: 'f2', id: 'v2', title: 'Video 2', duration: 20, paused: false },
+      { frameToken: 'f1', id: 'v1', title: 'Video 1', duration: 10, paused: true }
+    ]
+    diffVideoCards(reversedVideos)
+    expect(list.children.length).toBe(2)
+    expect(list.children[0]).toBe(node2)
+    expect(list.children[1]).toBe(node1)
   })
 })
