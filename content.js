@@ -1040,6 +1040,7 @@
       seek,
       togglePiP,
       togglePlay,
+      toggleLoop,
       setVolume,
       toggleMute,
       toggleFullscreen,

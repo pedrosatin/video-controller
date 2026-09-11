@@ -42,6 +42,7 @@ const {
   _setActiveVideo,
   _getUserRate,
   togglePlay,
+  toggleLoop,
   setVolume,
   togglePiP,
   attachVideo,
@@ -1100,6 +1101,41 @@ describe('togglePiP', () => {
       '[VideoController] exitPictureInPicture failed:',
       error,
     )
+  })
+})
+
+describe('toggleLoop', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+  })
+
+  afterEach(() => {
+    hidePanel()
+  })
+
+  it('does nothing if no active video is attached', () => {
+    hidePanel()
+    expect(() => toggleLoop()).not.toThrow()
+  })
+
+  it('toggles loop property from false to true', () => {
+    attachVideo(video)
+    video.loop = false
+
+    toggleLoop()
+
+    expect(video.loop).toBe(true)
+  })
+
+  it('toggles loop property from true to false', () => {
+    attachVideo(video)
+    video.loop = true
+
+    toggleLoop()
+
+    expect(video.loop).toBe(false)
   })
 })
 
