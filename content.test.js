@@ -44,6 +44,7 @@ const {
   togglePlay,
   setVolume,
   togglePiP,
+  toggleLoop,
   attachVideo,
   hidePanel,
   promoteToTopLayer,
@@ -1243,5 +1244,36 @@ describe('hideIndicatorEl', () => {
 
     expect(indicator.style.display).toBe('none')
     expect(hidePopoverSpy).toHaveBeenCalled()
+  })
+})
+
+describe('toggleLoop', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+  })
+
+  afterEach(() => {
+    hidePanel()
+  })
+
+  it('does nothing if no active video is attached', () => {
+    hidePanel()
+    expect(() => toggleLoop()).not.toThrow()
+  })
+
+  it('toggles loop property from false to true', () => {
+    video.loop = false
+    attachVideo(video)
+    toggleLoop()
+    expect(video.loop).toBe(true)
+  })
+
+  it('toggles loop property from true to false', () => {
+    video.loop = true
+    attachVideo(video)
+    toggleLoop()
+    expect(video.loop).toBe(false)
   })
 })

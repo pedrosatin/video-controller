@@ -1042,6 +1042,7 @@
       togglePlay,
       setVolume,
       toggleMute,
+      toggleLoop,
       toggleFullscreen,
       attachVideo,
       hidePanel,
