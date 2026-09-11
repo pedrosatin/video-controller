@@ -937,6 +937,8 @@
   const mutObs = new MutationObserver((mutations) => {
     let checkRemovals = false
 
+    const addedElements = new Set()
+
     for (const m of mutations) {
       /* Ignore mutations of our own UI: rebuilding the selector options
          mutates the panel, which would re-trigger this observer and
@@ -946,6 +948,26 @@
       for (let i = 0, len = m.addedNodes.length; i < len; i++) {
         const node = m.addedNodes[i]
         if (node.nodeType === Node.ELEMENT_NODE) {
+          addedElements.add(node)
+        }
+      }
+
+      if (m.removedNodes.length > 0) checkRemovals = true
+    }
+
+    if (addedElements.size > 0) {
+      for (const node of addedElements) {
+        let hasAddedAncestor = false
+        let p = node.parentNode
+        while (p) {
+          if (addedElements.has(p)) {
+            hasAddedAncestor = true
+            break
+          }
+          p = p.parentNode
+        }
+
+        if (!hasAddedAncestor) {
           if (node.tagName === 'VIDEO') {
             registerVideo(node)
           } else {
@@ -956,8 +978,6 @@
           }
         }
       }
-
-      if (m.removedNodes.length > 0) checkRemovals = true
     }
 
     if (checkRemovals) {
