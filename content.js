@@ -1048,6 +1048,7 @@
       showIndicatorEl,
       hideIndicatorEl,
       _getIndicator: () => indicator,
+      updateLoopBtn,
       applyEnabled,
       promoteToTopLayer,
       videoSummaries,
