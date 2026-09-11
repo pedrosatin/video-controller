@@ -1041,6 +1041,7 @@
       togglePiP,
       togglePlay,
       setVolume,
+      updateVolumeUI,
       toggleMute,
       toggleFullscreen,
       attachVideo,
