@@ -1001,6 +1001,46 @@ describe('togglePlay', () => {
   })
 })
 
+describe('updateLoopBtn', () => {
+  let video
+  const { updateLoopBtn, attachVideo, hidePanel } = require('./content')
+
+  beforeEach(() => {
+    video = document.createElement('video')
+  })
+
+  afterEach(() => {
+    hidePanel()
+  })
+
+  it('does nothing if no active video is attached', () => {
+    hidePanel()
+    expect(() => updateLoopBtn()).not.toThrow()
+  })
+
+  it('sets vc-btn-active class and ON title if loop is true', () => {
+    video.loop = true
+    attachVideo(video)
+
+    updateLoopBtn()
+
+    const loopBtn = document.getElementById('vc-loop-btn')
+    expect(loopBtn.classList.contains('vc-btn-active')).toBe(true)
+    expect(loopBtn.title).toBe('Loop: ON (L)')
+  })
+
+  it('removes vc-btn-active class and sets OFF title if loop is false', () => {
+    video.loop = false
+    attachVideo(video)
+
+    updateLoopBtn()
+
+    const loopBtn = document.getElementById('vc-loop-btn')
+    expect(loopBtn.classList.contains('vc-btn-active')).toBe(false)
+    expect(loopBtn.title).toBe('Loop: OFF (L)')
+  })
+})
+
 describe('togglePiP', () => {
   let video
 

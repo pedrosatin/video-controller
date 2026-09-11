@@ -1044,6 +1044,7 @@
       toggleMute,
       toggleFullscreen,
       attachVideo,
+      updateLoopBtn,
       hidePanel,
       showIndicatorEl,
       hideIndicatorEl,
