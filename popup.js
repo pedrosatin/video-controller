@@ -45,12 +45,6 @@
     chrome.storage.local.set({ vcEnabled: enabled })
   })
 
-  /* Delegates to the shared util (scripts/utils.js, loaded by popup.html);
-     keeps the old falsy semantics: 0/NaN/Infinity -> '' ("Duration unknown") */
-  function formatDuration(s) {
-    return s ? window.formatDuration(s, '') : ''
-  }
-
   function showMessage(text) {
     const p = document.createElement('p')
     p.id = 'no-videos'
@@ -88,7 +82,7 @@
 
   function updateVideoCard(card, v, i) {
     const name = v.title || v.src || `Video ${i + 1}`
-    const dur = formatDuration(v.duration)
+    const dur = v.duration ? window.formatDuration(v.duration, '') : ''
     const state = v.paused ? '⏸' : '▶'
 
     card.querySelector('.vc-thumb').textContent = state
@@ -222,7 +216,6 @@
   /* Export for testing */
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-      formatDuration,
       reflectEnabled,
       createVideoCard,
       updateVideoCard,
