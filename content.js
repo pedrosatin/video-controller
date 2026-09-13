@@ -262,6 +262,7 @@
     const btn = document.createElement('button')
     btn.className = 'vc-btn vc-preset-btn'
     btn.dataset.speed = s
+    btn._parsedSpeed = s
     btn.title = `${s}×`
     btn.textContent = `${s}×`
     presetsRow.appendChild(btn)
@@ -374,7 +375,7 @@
     const r = _get(activeVideo, 'playbackRate') || 1
     speedBadge.textContent = `${r.toFixed(2)}×`
     presetBtns.forEach((btn) => {
-      btn.classList.toggle('vc-preset-active', parseFloat(btn.dataset.speed) === r)
+      btn.classList.toggle('vc-preset-active', btn._parsedSpeed === r)
     })
   })
 
@@ -654,7 +655,7 @@
     ].forEach(([sel, fn]) => q(sel).addEventListener('click', fn))
 
     presetBtns.forEach((btn) => {
-      btn.addEventListener('click', () => setSpeed(parseFloat(btn.dataset.speed)))
+      btn.addEventListener('click', () => setSpeed(btn._parsedSpeed))
     })
 
     muteBtn.addEventListener('click', toggleMute)
@@ -806,9 +807,8 @@
       videoRects = new WeakMap()
     }
 
-    const videos = Array.from(visibilityObserver ? visibleVideos : knownVideos)
-    for (let i = videos.length - 1; i >= 0; i--) {
-      const v = videos[i]
+    const source = visibilityObserver ? visibleVideos : knownVideos
+    for (const v of source) {
       if (!v.isConnected) continue
 
       let r = videoRects.get(v)
@@ -937,6 +937,8 @@
   const mutObs = new MutationObserver((mutations) => {
     let checkRemovals = false
 
+    const addedElements = new Set()
+
     for (const m of mutations) {
       /* Ignore mutations of our own UI: rebuilding the selector options
          mutates the panel, which would re-trigger this observer and
@@ -946,6 +948,26 @@
       for (let i = 0, len = m.addedNodes.length; i < len; i++) {
         const node = m.addedNodes[i]
         if (node.nodeType === Node.ELEMENT_NODE) {
+          addedElements.add(node)
+        }
+      }
+
+      if (m.removedNodes.length > 0) checkRemovals = true
+    }
+
+    if (addedElements.size > 0) {
+      for (const node of addedElements) {
+        let hasAddedAncestor = false
+        let p = node.parentNode
+        while (p) {
+          if (addedElements.has(p)) {
+            hasAddedAncestor = true
+            break
+          }
+          p = p.parentNode
+        }
+
+        if (!hasAddedAncestor) {
           if (node.tagName === 'VIDEO') {
             registerVideo(node)
           } else {
@@ -956,8 +978,6 @@
           }
         }
       }
-
-      if (m.removedNodes.length > 0) checkRemovals = true
     }
 
     if (checkRemovals) {
