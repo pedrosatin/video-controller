@@ -807,9 +807,8 @@
       videoRects = new WeakMap()
     }
 
-    const videos = Array.from(visibilityObserver ? visibleVideos : knownVideos)
-    for (let i = videos.length - 1; i >= 0; i--) {
-      const v = videos[i]
+    const source = visibilityObserver ? visibleVideos : knownVideos
+    for (const v of source) {
       if (!v.isConnected) continue
 
       let r = videoRects.get(v)
