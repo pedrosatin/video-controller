@@ -41,6 +41,7 @@ const {
   showMessage,
   openVideo,
   renderVideos,
+  diffVideoCards,
   bindVideoCardEvents,
   _setPort,
   _setFound,
@@ -503,6 +504,69 @@ describe('renderVideos', () => {
     renderVideos()
 
     // Nodes should be reordered but retain their original instances
+    expect(list.children.length).toBe(2)
+    expect(list.children[0]).toBe(node2)
+    expect(list.children[1]).toBe(node1)
+  })
+})
+
+describe('diffVideoCards', () => {
+  let list
+
+  beforeEach(() => {
+    list = document.getElementById('video-list')
+    list.innerHTML = ''
+    _clearFound()
+  })
+
+  it('should create new elements when none exist', () => {
+    const videos = [
+      { frameToken: 'f1', id: 'v1', title: 'Vid 1', duration: 10, paused: true },
+      { frameToken: 'f2', id: 'v2', title: 'Vid 2', duration: 20, paused: false },
+    ]
+    diffVideoCards(videos)
+    expect(list.children.length).toBe(2)
+    expect(list.children[0].dataset.id).toBe('f1:v1')
+    expect(list.children[1].dataset.id).toBe('f2:v2')
+  })
+
+  it('should update existing elements and retain DOM nodes', () => {
+    const v1 = { frameToken: 'f1', id: 'v1', title: 'Vid 1', duration: 10, paused: true }
+    diffVideoCards([v1])
+
+    const node1 = list.children[0]
+    expect(node1.querySelector('.vc-name').textContent).toBe('Vid 1')
+
+    const v1Updated = { ...v1, title: 'Updated Vid 1' }
+    diffVideoCards([v1Updated])
+
+    expect(list.children.length).toBe(1)
+    expect(list.children[0]).toBe(node1)
+    expect(list.children[0].querySelector('.vc-name').textContent).toBe('Updated Vid 1')
+  })
+
+  it('should remove elements that are no longer present', () => {
+    const v1 = { frameToken: 'f1', id: 'v1', title: 'Vid 1', duration: 10, paused: true }
+    const v2 = { frameToken: 'f2', id: 'v2', title: 'Vid 2', duration: 20, paused: false }
+
+    diffVideoCards([v1, v2])
+    expect(list.children.length).toBe(2)
+
+    diffVideoCards([v2]) // v1 is removed
+    expect(list.children.length).toBe(1)
+    expect(list.children[0].dataset.id).toBe('f2:v2')
+  })
+
+  it('should correctly reorder elements based on the new array order', () => {
+    const v1 = { frameToken: 'f1', id: 'v1', title: 'Vid 1', duration: 10, paused: true }
+    const v2 = { frameToken: 'f2', id: 'v2', title: 'Vid 2', duration: 20, paused: false }
+
+    diffVideoCards([v1, v2])
+    const node1 = list.children[0]
+    const node2 = list.children[1]
+
+    diffVideoCards([v2, v1]) // Order reversed
+
     expect(list.children.length).toBe(2)
     expect(list.children[0]).toBe(node2)
     expect(list.children[1]).toBe(node1)
