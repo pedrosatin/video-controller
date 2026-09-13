@@ -1,6 +1,6 @@
 {
   "name": "video-controller",
-  "version": "1.0.0",
+  "version": "1.0.7",
   "description": "Take control of any <video> element on any page — including players that deliberately hide speed controls, block seeking, or reset your playback rate.",
   "main": "content.js",
   "directories": {
