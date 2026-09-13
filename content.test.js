@@ -43,6 +43,7 @@ const {
   _getUserRate,
   togglePlay,
   setVolume,
+  updateVolumeUI,
   togglePiP,
   toggleLoop,
   attachVideo,
@@ -973,6 +974,63 @@ describe('setVolume', () => {
 
     setVolume(0)
     expect(video.muted).toBe(true)
+  })
+})
+
+describe('updateVolumeUI', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    _setActiveVideo(video)
+  })
+
+  afterEach(() => {
+    _setActiveVideo(null)
+  })
+
+  it('does nothing if no active video', () => {
+    _setActiveVideo(null)
+    const muteBtn = document.querySelector('#vc-mute-btn')
+    muteBtn.textContent = 'INIT'
+    updateVolumeUI()
+    expect(muteBtn.textContent).toBe('INIT')
+  })
+
+  it('updates UI correctly for normal volume (>= 0.5)', () => {
+    video.volume = 0.8
+    video.muted = false
+    updateVolumeUI()
+    expect(document.querySelector('#vc-mute-btn').textContent).toBe('🔊')
+    expect(document.querySelector('#vc-vol-slider').value).toBe('0.8')
+    expect(document.querySelector('#vc-vol-display').textContent).toBe('80%')
+  })
+
+  it('updates UI correctly for normal volume (< 0.5)', () => {
+    video.volume = 0.3
+    video.muted = false
+    updateVolumeUI()
+    expect(document.querySelector('#vc-mute-btn').textContent).toBe('🔉')
+    expect(document.querySelector('#vc-vol-slider').value).toBe('0.3')
+    expect(document.querySelector('#vc-vol-display').textContent).toBe('30%')
+  })
+
+  it('updates UI correctly for volume 0', () => {
+    video.volume = 0
+    video.muted = false
+    updateVolumeUI()
+    expect(document.querySelector('#vc-mute-btn').textContent).toBe('🔇')
+    expect(document.querySelector('#vc-vol-slider').value).toBe('0')
+    expect(document.querySelector('#vc-vol-display').textContent).toBe('0%')
+  })
+
+  it('updates UI correctly when muted', () => {
+    video.volume = 0.8
+    video.muted = true
+    updateVolumeUI()
+    expect(document.querySelector('#vc-mute-btn').textContent).toBe('🔇')
+    expect(document.querySelector('#vc-vol-slider').value).toBe('0')
+    expect(document.querySelector('#vc-vol-display').textContent).toBe('0%')
   })
 })
 
