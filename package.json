@@ -29,6 +29,7 @@
   },
   "homepage": "https://github.com/pedrosatin/video-controller#readme",
   "devDependencies": {
+    "esbuild": "^0.28.1",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
     "oxfmt": "^0.59.0",
