@@ -28,6 +28,7 @@ Element.prototype.matches = function (selector) {
 }
 
 require('./scripts/utils.js')
+require('./scripts/native-access.js')
 require('./panelTemplate.js')
 const {
   _get,
