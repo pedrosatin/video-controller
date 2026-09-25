@@ -850,24 +850,23 @@
     }
   }
 
-  let lastMouseX = -1
-  let lastMouseY = -1
-  let indUpdatePending = false
+  let mouseX = -1
+  let mouseY = -1
+  let indRaf = null
 
   function scheduleIndicatorUpdate() {
-    if (indUpdatePending || lastMouseX < 0) return
-    indUpdatePending = true
-    requestAnimationFrame(() => {
-      indUpdatePending = false
-      updateIndicator(lastMouseX, lastMouseY)
+    if (indRaf) return
+    indRaf = requestAnimationFrame(() => {
+      updateIndicator(mouseX, mouseY)
+      indRaf = null
     })
   }
 
   document.addEventListener(
     'mousemove',
     (e) => {
-      lastMouseX = e.clientX
-      lastMouseY = e.clientY
+      mouseX = e.clientX
+      mouseY = e.clientY
       scheduleIndicatorUpdate()
     },
     true,
@@ -1070,6 +1069,11 @@
       showIndicatorEl,
       hideIndicatorEl,
       _getIndicator: () => indicator,
+      scheduleIndicatorUpdate,
+      _setMouse: (x, y) => { mouseX = x; mouseY = y },
+      _getIndRaf: () => indRaf,
+      _setIndRaf: (v) => { indRaf = v },
+      updateIndicator,
       updateLoopBtn,
       applyEnabled,
       promoteToTopLayer,
