@@ -1226,7 +1226,15 @@ describe('promoteToTopLayer', () => {
     expect(el.showPopover).toHaveBeenCalled()
   })
 
-  it('silently catches error when showPopover throws (e.g. disconnected)', () => {
+  it('silently catches error when showPopover throws (e.g. DOMException)', () => {
+    el.showPopover.mockImplementation(() => {
+      throw new DOMException('InvalidStateError')
+    })
+    expect(() => promoteToTopLayer(el)).not.toThrow()
+    expect(el.hidePopover).toHaveBeenCalled()
+  })
+
+  it('silently catches error when showPopover throws generic error (e.g. disconnected)', () => {
     el.showPopover.mockImplementation(() => {
       throw new Error('Disconnected')
     })
