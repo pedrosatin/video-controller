@@ -717,7 +717,7 @@
     )
   }
 
-  function bindKeyboardEvents() {
+  function handleKeyDown(e) {
     const IGNORED_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
 
     const KEY_HANDLERS = {
@@ -742,25 +742,23 @@
       Escape: () => hidePanel(),
     }
 
-    document.addEventListener(
-      'keydown',
-      (e) => {
-        if (panel.style.display === 'none' || !activeVideo) return
-        if (IGNORED_TAGS.has(e.target.tagName)) return
-        if (e.target.isContentEditable) return
-        /* keep native Space/Enter activation on focused panel buttons */
-        if (panel.contains(e.target) && (e.key === ' ' || e.key === 'Enter')) return
+    if (panel.style.display === 'none' || !activeVideo) return
+    if (IGNORED_TAGS.has(e.target.tagName)) return
+    if (e.target.isContentEditable) return
+    /* keep native Space/Enter activation on focused panel buttons */
+    if (panel.contains(e.target) && (e.key === ' ' || e.key === 'Enter')) return
 
-        const handler = KEY_HANDLERS[e.key]
-        if (handler) {
-          if (e.key !== 'Escape') {
-            e.preventDefault()
-          }
-          handler(e)
-        }
-      },
-      true,
-    )
+    const handler = KEY_HANDLERS[e.key]
+    if (handler) {
+      if (e.key !== 'Escape') {
+        e.preventDefault()
+      }
+      handler(e)
+    }
+  }
+
+  function bindKeyboardEvents() {
+    document.addEventListener('keydown', handleKeyDown, true)
   }
 
   function bindPanelEvents() {
