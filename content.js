@@ -71,6 +71,7 @@
   let rafId = null
   let hoveredVideo = null
   let dragState = null
+  let isPinned = false
   let indicatorHideTimer = null
   let scrubbing = false
   /* Master on/off switch, persisted in chrome.storage.local (key: vcEnabled).
@@ -598,45 +599,50 @@
     if (panel.style.display !== 'none') hidePanel()
   }
 
+  function togglePin() {
+    isPinned = !isPinned
+    pinBtn.classList.toggle('vc-btn-active', isPinned)
+    pinBtn.title = isPinned ? 'Unpin panel (drag enabled when unpinned)' : 'Pin panel'
+  }
+
+  function handleDragStart(e) {
+    if (isPinned || e.target.closest('button')) return
+    dragState = {
+      startX: e.clientX,
+      startY: e.clientY,
+      origLeft: panel.offsetLeft,
+      origTop: panel.offsetTop,
+      panelWidth: panel.offsetWidth,
+    }
+    panel.classList.add('vc-dragging')
+    e.preventDefault()
+  }
+
+  function handleDragMove(e) {
+    if (!dragState) return
+    const dx = e.clientX - dragState.startX
+    const dy = e.clientY - dragState.startY
+    /* keep at least part of the header on-screen so the panel stays reachable */
+    const left = clamp(dragState.origLeft + dx, 60 - dragState.panelWidth, window.innerWidth - 60)
+    const top = clamp(dragState.origTop + dy, 0, window.innerHeight - 36)
+    placePanel(left, top)
+  }
+
+  function handleDragEnd() {
+    if (!dragState) return
+    dragState = null
+    panel.classList.remove('vc-dragging')
+  }
+
   function bindDragEvents() {
     /* Pin toggle – when pinned the panel is not draggable */
-    let isPinned = false
-    pinBtn.addEventListener('click', () => {
-      isPinned = !isPinned
-      pinBtn.classList.toggle('vc-btn-active', isPinned)
-      pinBtn.title = isPinned ? 'Unpin panel (drag enabled when unpinned)' : 'Pin panel'
-    })
+    pinBtn.addEventListener('click', togglePin)
 
     /* Drag-to-move via the header */
     const header = q('#vc-header')
-    header.addEventListener('mousedown', (e) => {
-      if (isPinned || e.target.closest('button')) return
-      dragState = {
-        startX: e.clientX,
-        startY: e.clientY,
-        origLeft: panel.offsetLeft,
-        origTop: panel.offsetTop,
-        panelWidth: panel.offsetWidth,
-      }
-      panel.classList.add('vc-dragging')
-      e.preventDefault()
-    })
-
-    document.addEventListener('mousemove', (e) => {
-      if (!dragState) return
-      const dx = e.clientX - dragState.startX
-      const dy = e.clientY - dragState.startY
-      /* keep at least part of the header on-screen so the panel stays reachable */
-      const left = clamp(dragState.origLeft + dx, 60 - dragState.panelWidth, window.innerWidth - 60)
-      const top = clamp(dragState.origTop + dy, 0, window.innerHeight - 36)
-      placePanel(left, top)
-    })
-
-    document.addEventListener('mouseup', () => {
-      if (!dragState) return
-      dragState = null
-      panel.classList.remove('vc-dragging')
-    })
+    header.addEventListener('mousedown', handleDragStart)
+    document.addEventListener('mousemove', handleDragMove)
+    document.addEventListener('mouseup', handleDragEnd)
   }
 
   function bindButtonEvents() {
