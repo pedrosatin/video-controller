@@ -492,11 +492,7 @@
     }
     selectorRow.style.display = 'flex'
 
-    let snapshot = videoIds.get(videos[0])
-    for (let i = 1; i < videos.length; i++) {
-      snapshot += ','
-      snapshot += videoIds.get(videos[i])
-    }
+    const snapshot = videos.map((v) => videoIds.get(v)).join(',')
     if (snapshot !== selectorSnapshot) {
       rebuildVideoOptions(videos, snapshot)
     }
