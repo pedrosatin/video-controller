@@ -1061,6 +1061,7 @@
       togglePiP,
       togglePlay,
       setVolume,
+      updateSpeedUI,
       updateVolumeUI,
       toggleMute,
       toggleLoop,
