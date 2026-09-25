@@ -1203,6 +1203,19 @@ describe('togglePiP', () => {
   })
 })
 
+describe('safeHidePopover', () => {
+  it('calls hidePopover and safely catches errors', () => {
+    const { safeHidePopover } = require('./content')
+    const el = {
+      hidePopover: jest.fn(() => {
+        throw new Error('Not open')
+      }),
+    }
+    expect(() => safeHidePopover(el)).not.toThrow()
+    expect(el.hidePopover).toHaveBeenCalled()
+  })
+})
+
 describe('promoteToTopLayer', () => {
   let el
 
