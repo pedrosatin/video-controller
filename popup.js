@@ -127,7 +127,9 @@
 
   function diffVideoCards(videos) {
     const existingMap = new Map()
-    for (const child of list.children) {
+    const children = list.children
+    for (let idx = 0, len = children.length; idx < len; idx++) {
+      const child = children[idx]
       if (child.dataset.id) {
         existingMap.set(child.dataset.id, child)
       }
