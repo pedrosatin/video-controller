@@ -681,40 +681,40 @@
     loopBtn.addEventListener('click', toggleLoop)
   }
 
+  function handleFullscreenChange() {
+    updateFullscreenBtn()
+    if (POPOVER_OK) {
+      /* the fullscreen element joins the top layer above us — re-promote */
+      if (panel.style.display !== 'none') promoteToTopLayer(panel)
+      return
+    }
+    /* Fallback without Popover API: the top layer only renders children of
+       the fullscreen element, so re-parent the panel into it. Skip when the
+       video itself is fullscreen — <video> children are not rendered. */
+    const fsEl = document.fullscreenElement
+    if (fsEl && fsEl !== activeVideo && fsEl.tagName !== 'VIDEO') {
+      fsEl.appendChild(panel)
+      fsEl.appendChild(indicator)
+    } else if (!fsEl) {
+      docRoot().appendChild(panel)
+      docRoot().appendChild(indicator)
+    }
+  }
+
+  function handleToggle(e) {
+    if (e.target === panel || e.target === indicator) return
+    if (panel.style.display !== 'none') promoteToTopLayer(panel)
+  }
+
   function bindGlobalEvents() {
-    document.addEventListener('fullscreenchange', () => {
-      updateFullscreenBtn()
-      if (POPOVER_OK) {
-        /* the fullscreen element joins the top layer above us — re-promote */
-        if (panel.style.display !== 'none') promoteToTopLayer(panel)
-        return
-      }
-      /* Fallback without Popover API: the top layer only renders children of
-         the fullscreen element, so re-parent the panel into it. Skip when the
-         video itself is fullscreen — <video> children are not rendered. */
-      const fsEl = document.fullscreenElement
-      if (fsEl && fsEl !== activeVideo && fsEl.tagName !== 'VIDEO') {
-        fsEl.appendChild(panel)
-        fsEl.appendChild(indicator)
-      } else if (!fsEl) {
-        docRoot().appendChild(panel)
-        docRoot().appendChild(indicator)
-      }
-    })
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
     document.addEventListener('webkitfullscreenchange', updateFullscreenBtn)
 
     /* If the site opens its own popover after ours, it stacks above us in the
        top layer. ToggleEvents don't bubble but are visible to a capturing
        listener; re-promote so the panel stays on top. Our own toggles are
        filtered out to avoid recursion. */
-    document.addEventListener(
-      'toggle',
-      (e) => {
-        if (e.target === panel || e.target === indicator) return
-        if (panel.style.display !== 'none') promoteToTopLayer(panel)
-      },
-      true,
-    )
+    document.addEventListener('toggle', handleToggle, true)
   }
 
   function bindKeyboardEvents() {
