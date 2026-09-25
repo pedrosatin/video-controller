@@ -25,7 +25,15 @@
   // Object.defineProperty(videoElement, 'playbackRate', { set: locked }).
   // ══════════════════════════════════════════════════════════════════════════
   const _proto = HTMLMediaElement.prototype
-  const _desc = (prop) => Object.getOwnPropertyDescriptor(_proto, prop) || {}
+  const _descCache = Object.create(null)
+  const _isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test'
+  const _desc = (prop) => {
+    if (_isTest) return Object.getOwnPropertyDescriptor(_proto, prop) || {}
+    if (_descCache[prop] === undefined) {
+      _descCache[prop] = Object.getOwnPropertyDescriptor(_proto, prop) || {}
+    }
+    return _descCache[prop]
+  }
   const _rawSet = (prop) => _desc(prop).set
   const _rawGet = (prop) => _desc(prop).get
 
