@@ -934,6 +934,31 @@
     }
   }
 
+  function handleAddedElements(addedElements) {
+    for (const node of addedElements) {
+      let hasAddedAncestor = false
+      let p = node.parentNode
+      while (p) {
+        if (addedElements.has(p)) {
+          hasAddedAncestor = true
+          break
+        }
+        p = p.parentNode
+      }
+
+      if (!hasAddedAncestor) {
+        if (node.tagName === 'VIDEO') {
+          registerVideo(node)
+        } else {
+          const vids = node.getElementsByTagName('video')
+          for (let j = 0, vLen = vids.length; j < vLen; j++) {
+            registerVideo(vids[j])
+          }
+        }
+      }
+    }
+  }
+
   const mutObs = new MutationObserver((mutations) => {
     let checkRemovals = false
 
@@ -956,28 +981,7 @@
     }
 
     if (addedElements.size > 0) {
-      for (const node of addedElements) {
-        let hasAddedAncestor = false
-        let p = node.parentNode
-        while (p) {
-          if (addedElements.has(p)) {
-            hasAddedAncestor = true
-            break
-          }
-          p = p.parentNode
-        }
-
-        if (!hasAddedAncestor) {
-          if (node.tagName === 'VIDEO') {
-            registerVideo(node)
-          } else {
-            const vids = node.getElementsByTagName('video')
-            for (let j = 0, vLen = vids.length; j < vLen; j++) {
-              registerVideo(vids[j])
-            }
-          }
-        }
-      }
+      handleAddedElements(addedElements)
     }
 
     if (checkRemovals) {
