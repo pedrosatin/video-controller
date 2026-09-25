@@ -717,50 +717,47 @@
     )
   }
 
-  function bindKeyboardEvents() {
+  const KEY_HANDLERS = {
+    ' ': () => togglePlay(),
+    k: () => togglePlay(),
+    ArrowLeft: (e) => seek(e.shiftKey ? -SEEK_LARGE : -SEEK_SMALL),
+    ArrowRight: (e) => seek(e.shiftKey ? +SEEK_LARGE : +SEEK_SMALL),
+    ArrowUp: () => {
+      setVolume((_get(activeVideo, 'volume') || 0) + 0.1)
+      updateVolumeUI()
+    },
+    ArrowDown: () => {
+      setVolume((_get(activeVideo, 'volume') || 0) - 0.1)
+      updateVolumeUI()
+    },
+    '>': () => changeSpeed(+SPEED_FINE),
+    '<': () => changeSpeed(-SPEED_FINE),
+    m: () => toggleMute(),
+    f: () => toggleFullscreen(),
+    p: () => togglePiP(),
+    l: () => toggleLoop(),
+    Escape: () => hidePanel(),
+  }
+
+  function handleKeydown(e) {
     const IGNORED_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
+    if (panel.style.display === 'none' || !activeVideo) return
+    if (IGNORED_TAGS.has(e.target.tagName)) return
+    if (e.target.isContentEditable) return
+    /* keep native Space/Enter activation on focused panel buttons */
+    if (panel.contains(e.target) && (e.key === ' ' || e.key === 'Enter')) return
 
-    const KEY_HANDLERS = {
-      ' ': () => togglePlay(),
-      k: () => togglePlay(),
-      ArrowLeft: (e) => seek(e.shiftKey ? -SEEK_LARGE : -SEEK_SMALL),
-      ArrowRight: (e) => seek(e.shiftKey ? +SEEK_LARGE : +SEEK_SMALL),
-      ArrowUp: () => {
-        setVolume((_get(activeVideo, 'volume') || 0) + 0.1)
-        updateVolumeUI()
-      },
-      ArrowDown: () => {
-        setVolume((_get(activeVideo, 'volume') || 0) - 0.1)
-        updateVolumeUI()
-      },
-      '>': () => changeSpeed(+SPEED_FINE),
-      '<': () => changeSpeed(-SPEED_FINE),
-      m: () => toggleMute(),
-      f: () => toggleFullscreen(),
-      p: () => togglePiP(),
-      l: () => toggleLoop(),
-      Escape: () => hidePanel(),
+    const handler = KEY_HANDLERS[e.key]
+    if (handler) {
+      if (e.key !== 'Escape') {
+        e.preventDefault()
+      }
+      handler(e)
     }
+  }
 
-    document.addEventListener(
-      'keydown',
-      (e) => {
-        if (panel.style.display === 'none' || !activeVideo) return
-        if (IGNORED_TAGS.has(e.target.tagName)) return
-        if (e.target.isContentEditable) return
-        /* keep native Space/Enter activation on focused panel buttons */
-        if (panel.contains(e.target) && (e.key === ' ' || e.key === 'Enter')) return
-
-        const handler = KEY_HANDLERS[e.key]
-        if (handler) {
-          if (e.key !== 'Escape') {
-            e.preventDefault()
-          }
-          handler(e)
-        }
-      },
-      true,
-    )
+  function bindKeyboardEvents() {
+    document.addEventListener('keydown', handleKeydown, true)
   }
 
   function bindPanelEvents() {
