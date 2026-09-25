@@ -172,46 +172,50 @@
     setTimeout(() => window.close(), PORT_FLUSH_DELAY_MS)
   }
 
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  function handlePortMessage(msg) {
+    if (msg.type !== 'VIDEOS' || !Array.isArray(msg.videos)) return
+    for (const v of msg.videos) {
+      if (!v || typeof v !== 'object') continue
+      if (typeof v.frameToken !== 'string' || typeof v.id !== 'number') continue
+      found.set(`${v.frameToken}:${v.id}`, {
+        frameToken: v.frameToken,
+        id: v.id,
+        title: String(v.title || ''),
+        src: String(v.src || ''),
+        duration: Number(v.duration) || 0,
+        paused: Boolean(v.paused),
+      })
+    }
+    renderVideos()
+  }
+
+  /* Fires immediately when no content script is listening in the tab */
+  function handlePortDisconnect() {
+    const err = chrome.runtime.lastError
+    if (found.size === 0) {
+      showMessage(
+        `Could not connect to the page. Try refreshing the tab. (${err ? err.message : 'disconnected'})`,
+      )
+    }
+  }
+
+  function handleTabsQuery(tabs) {
     if (!tabs[0]) {
       showMessage('No videos found on this page.')
       return
     }
 
     port = chrome.tabs.connect(tabs[0].id, { name: 'vc-popup' })
-
-    port.onMessage.addListener((msg) => {
-      if (msg.type !== 'VIDEOS' || !Array.isArray(msg.videos)) return
-      for (const v of msg.videos) {
-        if (!v || typeof v !== 'object') continue
-        if (typeof v.frameToken !== 'string' || typeof v.id !== 'number') continue
-        found.set(`${v.frameToken}:${v.id}`, {
-          frameToken: v.frameToken,
-          id: v.id,
-          title: String(v.title || ''),
-          src: String(v.src || ''),
-          duration: Number(v.duration) || 0,
-          paused: Boolean(v.paused),
-        })
-      }
-      renderVideos()
-    })
-
-    /* Fires immediately when no content script is listening in the tab */
-    port.onDisconnect.addListener(() => {
-      const err = chrome.runtime.lastError
-      if (found.size === 0) {
-        showMessage(
-          `Could not connect to the page. Try refreshing the tab. (${err ? err.message : 'disconnected'})`,
-        )
-      }
-    })
+    port.onMessage.addListener(handlePortMessage)
+    port.onDisconnect.addListener(handlePortDisconnect)
 
     /* Give frames a moment to report before declaring none found */
     setTimeout(() => {
       if (found.size === 0 && list.querySelector('.spinner')) renderVideos()
     }, FRAME_REPORT_DELAY_MS)
-  })
+  }
+
+  chrome.tabs.query({ active: true, currentWindow: true }, handleTabsQuery)
 
   /* Export for testing */
   if (typeof module !== 'undefined' && module.exports) {
