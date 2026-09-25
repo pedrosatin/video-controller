@@ -389,9 +389,8 @@
   })
 
   const updateLoopBtn = withActiveVideo(function () {
-    const looping = _get(activeVideo, 'loop')
-    loopBtn.classList.toggle('vc-btn-active', looping)
-    loopBtn.title = `Loop: ${looping ? 'ON' : 'OFF'} (L)`
+    const l = _get(activeVideo, 'loop')
+    loopBtn.classList.toggle('vc-active', l)
   })
 
   function updateFullscreenBtn() {

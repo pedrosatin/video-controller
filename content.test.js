@@ -908,22 +908,20 @@ describe('updateLoopBtn', () => {
     expect(() => updateLoopBtn()).not.toThrow()
   })
 
-  it('adds vc-btn-active class and updates title when loop is true', () => {
+  it('adds vc-active class when loop is true', () => {
     video.loop = true
     updateLoopBtn()
 
     const loopBtn = document.querySelector('#vc-loop-btn')
-    expect(loopBtn.classList.contains('vc-btn-active')).toBe(true)
-    // Only verify classList, title is verified correctly based on source code though the review bot had an outdated view
+    expect(loopBtn.classList.contains('vc-active')).toBe(true)
   })
 
-  it('removes vc-btn-active class and updates title when loop is false', () => {
+  it('removes vc-active class when loop is false', () => {
     video.loop = false
     updateLoopBtn()
 
     const loopBtn = document.querySelector('#vc-loop-btn')
-    expect(loopBtn.classList.contains('vc-btn-active')).toBe(false)
-    // Only verify classList, title is verified correctly based on source code though the review bot had an outdated view
+    expect(loopBtn.classList.contains('vc-active')).toBe(false)
   })
 })
 
