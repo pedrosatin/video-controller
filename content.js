@@ -639,9 +639,17 @@
     })
   }
 
-  function bindButtonEvents() {
+  function bindPlaybackEvents() {
     playBtn.addEventListener('click', togglePlay)
+    muteBtn.addEventListener('click', toggleMute)
+    volSlider.addEventListener('input', () => {
+      setVolume(parseFloat(volSlider.value))
+      updateVolumeUI()
+    })
+    loopBtn.addEventListener('click', toggleLoop)
+  }
 
+  function bindSeekAndSpeedEvents() {
     ;[
       ['#vc-back-large', () => seek(-SEEK_LARGE)],
       ['#vc-back-small', () => seek(-SEEK_SMALL)],
@@ -657,14 +665,9 @@
     presetBtns.forEach((btn) => {
       btn.addEventListener('click', () => setSpeed(btn._parsedSpeed))
     })
+  }
 
-    muteBtn.addEventListener('click', toggleMute)
-
-    volSlider.addEventListener('input', () => {
-      setVolume(parseFloat(volSlider.value))
-      updateVolumeUI()
-    })
-
+  function bindProgressEvents() {
     progressBar.addEventListener('pointerdown', () => {
       scrubbing = true
     })
@@ -675,10 +678,18 @@
     progressBar.addEventListener('input', () => {
       seekTo(progressBar.value / 1000)
     })
+  }
 
+  function bindModeEvents() {
     q('#vc-fullscreen-btn').addEventListener('click', toggleFullscreen)
     q('#vc-pip-btn').addEventListener('click', togglePiP)
-    loopBtn.addEventListener('click', toggleLoop)
+  }
+
+  function bindButtonEvents() {
+    bindPlaybackEvents()
+    bindSeekAndSpeedEvents()
+    bindProgressEvents()
+    bindModeEvents()
   }
 
   function bindGlobalEvents() {
