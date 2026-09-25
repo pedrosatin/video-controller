@@ -956,18 +956,34 @@
     }
 
     if (addedElements.size > 0) {
+      const knownHas = new Set()
+      const knownNotHas = new Set()
+
       for (const node of addedElements) {
         let hasAddedAncestor = false
         let p = node.parentNode
+        const path = []
+
         while (p) {
-          if (addedElements.has(p)) {
+          if (addedElements.has(p) || knownHas.has(p)) {
             hasAddedAncestor = true
             break
           }
+          if (knownNotHas.has(p)) {
+            break
+          }
+          path.push(p)
           p = p.parentNode
         }
 
-        if (!hasAddedAncestor) {
+        if (hasAddedAncestor) {
+          for (let i = 0, len = path.length; i < len; i++) {
+            knownHas.add(path[i])
+          }
+        } else {
+          for (let i = 0, len = path.length; i < len; i++) {
+            knownNotHas.add(path[i])
+          }
           if (node.tagName === 'VIDEO') {
             registerVideo(node)
           } else {
