@@ -125,17 +125,21 @@
     diffVideoCards(videos)
   }
 
-  function diffVideoCards(videos) {
-    const existingMap = new Map()
-    for (const child of list.children) {
+  function getExistingCardsMap() {
+    const map = new Map()
+    for (let i = 0, len = list.children.length; i < len; i++) {
+      const child = list.children[i]
       if (child.dataset.id) {
-        existingMap.set(child.dataset.id, child)
+        map.set(child.dataset.id, child)
       }
     }
+    return map
+  }
 
+  function processVideoUpdates(videos, existingMap) {
     const newOrder = []
-
-    videos.forEach((v, i) => {
+    for (let i = 0, len = videos.length; i < len; i++) {
+      const v = videos[i]
       const id = `${v.frameToken}:${v.id}`
       let node = existingMap.get(id)
 
@@ -146,19 +150,30 @@
         node = createVideoCard(v, i)
       }
       newOrder.push(node)
-    })
+    }
+    return newOrder
+  }
 
-    /* Remove elements no longer present */
+  function removeStaleCards(existingMap) {
     for (const child of existingMap.values()) {
       list.removeChild(child)
     }
+  }
 
-    /* Reorder and append new ones */
-    newOrder.forEach((node, idx) => {
+  function reorderCards(newOrder) {
+    for (let idx = 0, len = newOrder.length; idx < len; idx++) {
+      const node = newOrder[idx]
       if (list.children[idx] !== node) {
         list.insertBefore(node, list.children[idx] || null)
       }
-    })
+    }
+  }
+
+  function diffVideoCards(videos) {
+    const existingMap = getExistingCardsMap()
+    const newOrder = processVideoUpdates(videos, existingMap)
+    removeStaleCards(existingMap)
+    reorderCards(newOrder)
   }
 
   function openVideo(v) {
