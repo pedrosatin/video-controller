@@ -463,6 +463,19 @@ describe('_set helper', () => {
 
     expect(() => _set(video, propertyName, expectedValue)).not.toThrow()
   })
+
+  it('should silently ignore errors when throwing directly from setter property', () => {
+    const propertyName = 'mockPropertyDirectError2'
+    const expectedValue = 'testValueDirectError2'
+
+    Object.defineProperty(video, propertyName, {
+      set: () => {
+        throw new Error('This should be caught by _set')
+      },
+    })
+
+    expect(() => _set(video, propertyName, expectedValue)).not.toThrow()
+  })
 })
 
 describe('_get helper error path', () => {
