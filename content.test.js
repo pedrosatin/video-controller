@@ -50,6 +50,7 @@ const {
   hidePanel,
   promoteToTopLayer,
   hideIndicatorEl,
+  showIndicatorEl,
   _getIndicator,
   updateLoopBtn,
   videoSummaries,
@@ -1321,6 +1322,39 @@ describe('seek', () => {
     seek(15)
 
     expect(setTimeSpy).toHaveBeenCalledWith(105)
+  })
+})
+
+describe('showIndicatorEl', () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('shows the indicator and calls showPopover', () => {
+    const indicator = _getIndicator()
+    indicator.style.display = 'none'
+
+    const showPopoverSpy = jest.spyOn(HTMLElement.prototype, 'showPopover')
+
+    showIndicatorEl()
+
+    expect(indicator.style.display).toBe('flex')
+    expect(showPopoverSpy).toHaveBeenCalled()
+  })
+
+  it('silently catches error when showPopover throws (e.g. disconnected)', () => {
+    const indicator = _getIndicator()
+    indicator.style.display = 'none'
+
+    const showPopoverSpy = jest
+      .spyOn(HTMLElement.prototype, 'showPopover')
+      .mockImplementation(() => {
+        throw new Error('Disconnected')
+      })
+
+    expect(() => showIndicatorEl()).not.toThrow()
+    expect(indicator.style.display).toBe('flex')
+    expect(showPopoverSpy).toHaveBeenCalled()
   })
 })
 
