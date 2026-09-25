@@ -44,7 +44,11 @@
     try {
       return getter ? getter.call(video) : video[prop]
     } catch {
-      return video[prop]
+      try {
+        return video[prop]
+      } catch {
+        return undefined
+      }
     }
   }
 

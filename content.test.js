@@ -503,6 +503,26 @@ describe('_get helper error path', () => {
       }
     }
   })
+
+  it('should return undefined when the fallback direct property access also throws', () => {
+    const video = document.createElement('video')
+    const propertyName = 'mockPropertyErrorFallback'
+
+    // Define a getter on the object itself that throws,
+    // simulating a failure in the catch block: `return video[prop]`
+    Object.defineProperty(video, propertyName, {
+      get: function () {
+        throw new Error('Simulated fallback direct getter error')
+      },
+      configurable: true,
+    })
+
+    // Act
+    const result = _get(video, propertyName)
+
+    // Assert
+    expect(result).toBeUndefined()
+  })
 })
 
 describe('pointInRect', () => {
