@@ -43,6 +43,7 @@ const {
   _getUserRate,
   togglePlay,
   setVolume,
+  updateSpeedUI,
   updateVolumeUI,
   togglePiP,
   toggleLoop,
@@ -974,6 +975,53 @@ describe('setVolume', () => {
 
     setVolume(0)
     expect(video.muted).toBe(true)
+  })
+})
+
+describe('updateSpeedUI', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    _setActiveVideo(video)
+  })
+
+  afterEach(() => {
+    _setActiveVideo(null)
+  })
+
+  it('does nothing if no active video', () => {
+    _setActiveVideo(null)
+    const speedBadge = document.querySelector('#vc-speed-badge')
+    speedBadge.textContent = 'INIT'
+    updateSpeedUI()
+    expect(speedBadge.textContent).toBe('INIT')
+  })
+
+  it('updates UI correctly for normal playback rate', () => {
+    video.playbackRate = 1.25
+    updateSpeedUI()
+    expect(document.querySelector('#vc-speed-badge').textContent).toBe('1.25×')
+  })
+
+  it('toggles preset buttons based on playback rate', () => {
+    const presetBtns = document.querySelector('#vc-presets-row').querySelectorAll('.vc-preset-btn')
+
+    // Setup _parsedSpeed on mock DOM elements (mocking the initialization in content.js)
+    presetBtns[0]._parsedSpeed = 1.0
+    presetBtns[1]._parsedSpeed = 1.25
+
+    video.playbackRate = 1.25
+    updateSpeedUI()
+
+    expect(presetBtns[0].classList.contains('vc-preset-active')).toBe(false)
+    expect(presetBtns[1].classList.contains('vc-preset-active')).toBe(true)
+
+    video.playbackRate = 1.0
+    updateSpeedUI()
+
+    expect(presetBtns[0].classList.contains('vc-preset-active')).toBe(true)
+    expect(presetBtns[1].classList.contains('vc-preset-active')).toBe(false)
   })
 })
 
