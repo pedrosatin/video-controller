@@ -51,6 +51,7 @@ const {
   hidePanel,
   promoteToTopLayer,
   hideIndicatorEl,
+  showIndicatorEl,
   _getIndicator,
   scheduleIndicatorUpdate,
   _setMouse,
@@ -1455,6 +1456,39 @@ describe('scheduleIndicatorUpdate', () => {
     expect(_getIndRaf()).toBeNull()
 
     rectMock.mockRestore();
+  })
+})
+
+describe('showIndicatorEl', () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('shows the indicator and calls showPopover', () => {
+    const indicator = _getIndicator()
+    indicator.style.display = 'none'
+
+    const showPopoverSpy = jest.spyOn(HTMLElement.prototype, 'showPopover')
+
+    showIndicatorEl()
+
+    expect(indicator.style.display).toBe('flex')
+    expect(showPopoverSpy).toHaveBeenCalled()
+  })
+
+  it('silently catches error when showPopover throws (e.g. disconnected)', () => {
+    const indicator = _getIndicator()
+    indicator.style.display = 'none'
+
+    const showPopoverSpy = jest
+      .spyOn(HTMLElement.prototype, 'showPopover')
+      .mockImplementation(() => {
+        throw new Error('Disconnected')
+      })
+
+    expect(() => showIndicatorEl()).not.toThrow()
+    expect(indicator.style.display).toBe('flex')
+    expect(showPopoverSpy).toHaveBeenCalled()
   })
 })
 
