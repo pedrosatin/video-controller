@@ -24,29 +24,11 @@
   // bypass per-instance overrides that some players set via
   // Object.defineProperty(videoElement, 'playbackRate', { set: locked }).
   // ══════════════════════════════════════════════════════════════════════════
-  const _proto = HTMLMediaElement.prototype
-  const _desc = (prop) => Object.getOwnPropertyDescriptor(_proto, prop) || {}
-  const _rawSet = (prop) => _desc(prop).set
-  const _rawGet = (prop) => _desc(prop).get
-
-  function _set(video, prop, value) {
-    const setter = _rawSet(prop)
-    try {
-      if (setter) setter.call(video, value)
-      else video[prop] = value
-    } catch {
-      /* silently ignore; the native API should always work */
-    }
-  }
-
-  function _get(video, prop) {
-    const getter = _rawGet(prop)
-    try {
-      return getter ? getter.call(video) : video[prop]
-    } catch {
-      return video[prop]
-    }
-  }
+  const _nativeAccess =
+    (typeof window !== 'undefined' && window._vcNativeAccess) ||
+    (typeof require !== 'undefined' ? require('./scripts/native-access.js') : {}) ||
+    {}
+  const { _desc, _rawGet, _rawSet, _get, _set } = _nativeAccess
 
   // ══════════════════════════════════════════════════════════════════════════
   // CONSTANTS
