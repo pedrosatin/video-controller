@@ -1418,14 +1418,12 @@ describe('seek', () => {
   })
 })
 
-
 describe('scheduleIndicatorUpdate', () => {
   beforeEach(() => {
     jest.useFakeTimers()
     jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => setTimeout(cb, 16))
     _setMouse(-1, -1)
     _setIndRaf(null)
-
   })
 
   afterEach(() => {
@@ -1444,8 +1442,15 @@ describe('scheduleIndicatorUpdate', () => {
 
     // We mock getBoundingClientRect on HTMLElement to prevent errors in updateIndicator
     const rectMock = jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
-      top: 0, left: 0, bottom: 100, right: 100, width: 100, height: 100, x: 0, y: 0
-    });
+      top: 0,
+      left: 0,
+      bottom: 100,
+      right: 100,
+      width: 100,
+      height: 100,
+      x: 0,
+      y: 0,
+    })
 
     scheduleIndicatorUpdate()
     expect(_getIndRaf()).not.toBeNull()
@@ -1455,7 +1460,7 @@ describe('scheduleIndicatorUpdate', () => {
     jest.advanceTimersByTime(16)
     expect(_getIndRaf()).toBeNull()
 
-    rectMock.mockRestore();
+    rectMock.mockRestore()
   })
 })
 

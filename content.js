@@ -1118,9 +1118,14 @@
       hideIndicatorEl,
       _getIndicator: () => indicator,
       scheduleIndicatorUpdate,
-      _setMouse: (x, y) => { mouseX = x; mouseY = y },
+      _setMouse: (x, y) => {
+        mouseX = x
+        mouseY = y
+      },
       _getIndRaf: () => indRaf,
-      _setIndRaf: (v) => { indRaf = v },
+      _setIndRaf: (v) => {
+        indRaf = v
+      },
       updateIndicator,
       updateLoopBtn,
       applyEnabled,
