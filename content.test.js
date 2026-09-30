@@ -43,6 +43,7 @@ const {
   _getUserRate,
   togglePlay,
   setVolume,
+  updateSpeedUI,
   updateVolumeUI,
   togglePiP,
   toggleLoop,
@@ -52,6 +53,10 @@ const {
   hideIndicatorEl,
   showIndicatorEl,
   _getIndicator,
+  scheduleIndicatorUpdate,
+  _setMouse,
+  _getIndRaf,
+  _setIndRaf,
   updateLoopBtn,
   videoSummaries,
   scanVideos,
@@ -503,6 +508,26 @@ describe('_get helper error path', () => {
         delete HTMLMediaElement.prototype[propertyName]
       }
     }
+  })
+
+  it('should return undefined when the fallback direct property access also throws', () => {
+    const video = document.createElement('video')
+    const propertyName = 'mockPropertyErrorFallback'
+
+    // Define a getter on the object itself that throws,
+    // simulating a failure in the catch block: `return video[prop]`
+    Object.defineProperty(video, propertyName, {
+      get: function () {
+        throw new Error('Simulated fallback direct getter error')
+      },
+      configurable: true,
+    })
+
+    // Act
+    const result = _get(video, propertyName)
+
+    // Assert
+    expect(result).toBeUndefined()
   })
 })
 
@@ -978,6 +1003,53 @@ describe('setVolume', () => {
   })
 })
 
+describe('updateSpeedUI', () => {
+  let video
+
+  beforeEach(() => {
+    video = document.createElement('video')
+    _setActiveVideo(video)
+  })
+
+  afterEach(() => {
+    _setActiveVideo(null)
+  })
+
+  it('does nothing if no active video', () => {
+    _setActiveVideo(null)
+    const speedBadge = document.querySelector('#vc-speed-badge')
+    speedBadge.textContent = 'INIT'
+    updateSpeedUI()
+    expect(speedBadge.textContent).toBe('INIT')
+  })
+
+  it('updates UI correctly for normal playback rate', () => {
+    video.playbackRate = 1.25
+    updateSpeedUI()
+    expect(document.querySelector('#vc-speed-badge').textContent).toBe('1.25×')
+  })
+
+  it('toggles preset buttons based on playback rate', () => {
+    const presetBtns = document.querySelector('#vc-presets-row').querySelectorAll('.vc-preset-btn')
+
+    // Setup _parsedSpeed on mock DOM elements (mocking the initialization in content.js)
+    presetBtns[0]._parsedSpeed = 1.0
+    presetBtns[1]._parsedSpeed = 1.25
+
+    video.playbackRate = 1.25
+    updateSpeedUI()
+
+    expect(presetBtns[0].classList.contains('vc-preset-active')).toBe(false)
+    expect(presetBtns[1].classList.contains('vc-preset-active')).toBe(true)
+
+    video.playbackRate = 1.0
+    updateSpeedUI()
+
+    expect(presetBtns[0].classList.contains('vc-preset-active')).toBe(true)
+    expect(presetBtns[1].classList.contains('vc-preset-active')).toBe(false)
+  })
+})
+
 describe('updateVolumeUI', () => {
   let video
 
@@ -1204,6 +1276,19 @@ describe('togglePiP', () => {
   })
 })
 
+describe('safeHidePopover', () => {
+  it('calls hidePopover and safely catches errors', () => {
+    const { safeHidePopover } = require('./content')
+    const el = {
+      hidePopover: jest.fn(() => {
+        throw new Error('Not open')
+      }),
+    }
+    expect(() => safeHidePopover(el)).not.toThrow()
+    expect(el.hidePopover).toHaveBeenCalled()
+  })
+})
+
 describe('promoteToTopLayer', () => {
   let el
 
@@ -1227,7 +1312,15 @@ describe('promoteToTopLayer', () => {
     expect(el.showPopover).toHaveBeenCalled()
   })
 
-  it('silently catches error when showPopover throws (e.g. disconnected)', () => {
+  it('silently catches error when showPopover throws (e.g. DOMException)', () => {
+    el.showPopover.mockImplementation(() => {
+      throw new DOMException('InvalidStateError')
+    })
+    expect(() => promoteToTopLayer(el)).not.toThrow()
+    expect(el.hidePopover).toHaveBeenCalled()
+  })
+
+  it('silently catches error when showPopover throws generic error (e.g. disconnected)', () => {
     el.showPopover.mockImplementation(() => {
       throw new Error('Disconnected')
     })
@@ -1322,6 +1415,47 @@ describe('seek', () => {
     seek(15)
 
     expect(setTimeSpy).toHaveBeenCalledWith(105)
+  })
+})
+
+
+describe('scheduleIndicatorUpdate', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+    jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => setTimeout(cb, 16))
+    _setMouse(-1, -1)
+    _setIndRaf(null)
+
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+    jest.restoreAllMocks()
+  })
+
+  it('returns early if indRaf is set', () => {
+    _setIndRaf(123)
+    scheduleIndicatorUpdate()
+    expect(window.requestAnimationFrame).not.toHaveBeenCalled()
+  })
+
+  it('sets indRaf and schedules rAF', () => {
+    _setMouse(50, 50)
+
+    // We mock getBoundingClientRect on HTMLElement to prevent errors in updateIndicator
+    const rectMock = jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      top: 0, left: 0, bottom: 100, right: 100, width: 100, height: 100, x: 0, y: 0
+    });
+
+    scheduleIndicatorUpdate()
+    expect(_getIndRaf()).not.toBeNull()
+    expect(window.requestAnimationFrame).toHaveBeenCalledTimes(1)
+
+    // Simulate rAF execution
+    jest.advanceTimersByTime(16)
+    expect(_getIndRaf()).toBeNull()
+
+    rectMock.mockRestore();
   })
 })
 
