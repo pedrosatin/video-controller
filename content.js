@@ -368,7 +368,11 @@
     if (dur > 0 && isFinite(dur) && !scrubbing) {
       progressBar.value = (cur / dur) * 1000
     }
-    timeDisp.textContent = `${window.formatDuration(cur, '–:––')} / ${window.formatDuration(dur, '–:––')}`
+    const timeStr = `${window.formatDuration(cur, '–:––')} / ${window.formatDuration(dur, '–:––')}`
+    if (timeDisp._lastTimeStr !== timeStr) {
+      timeDisp.textContent = timeStr
+      timeDisp._lastTimeStr = timeStr
+    }
   })
 
   const updateSpeedUI = withActiveVideo(function () {
