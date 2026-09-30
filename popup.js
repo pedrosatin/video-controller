@@ -229,7 +229,6 @@
       },
       _setFound: (key, val) => found.set(key, val),
       _clearFound: () => found.clear(),
-      _getFound: () => found,
       _getCardVideo: (card) => cardVideos.get(card),
     }
   }
