@@ -1125,6 +1125,7 @@
       updateLoopBtn,
       applyEnabled,
       promoteToTopLayer,
+      safeHidePopover,
       videoSummaries,
       scanVideos,
       FRAME_TOKEN,
