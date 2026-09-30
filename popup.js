@@ -53,8 +53,7 @@
   }
 
   function bindVideoCardEvents(card, btn, v) {
-    // Clear old listeners by replacing elements with clones if needed, or simply handle it.
-    // Instead of replacing the whole element, we'll store a reference to the current video object using a WeakMap.
+    /* armazena o vídeo no WeakMap para reaproveitar o card entre re-renders */
     cardVideos.set(card, v)
     if (!cardBound.has(card)) {
       cardBound.add(card)
