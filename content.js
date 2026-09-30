@@ -372,7 +372,11 @@
     if (dur > 0 && isFinite(dur) && !scrubbing) {
       progressBar.value = (cur / dur) * 1000
     }
-    timeDisp.textContent = `${window.formatDuration(cur, '–:––')} / ${window.formatDuration(dur, '–:––')}`
+    const timeStr = `${window.formatDuration(cur, '–:––')} / ${window.formatDuration(dur, '–:––')}`
+    if (timeDisp._lastTimeStr !== timeStr) {
+      timeDisp.textContent = timeStr
+      timeDisp._lastTimeStr = timeStr
+    }
   })
 
   const updateSpeedUI = withActiveVideo(function () {
@@ -496,11 +500,7 @@
     }
     selectorRow.style.display = 'flex'
 
-    let snapshot = videoIds.get(videos[0])
-    for (let i = 1; i < videos.length; i++) {
-      snapshot += ','
-      snapshot += videoIds.get(videos[i])
-    }
+    const snapshot = videos.map((v) => videoIds.get(v)).join(',')
     if (snapshot !== selectorSnapshot) {
       rebuildVideoOptions(videos, snapshot)
     }
