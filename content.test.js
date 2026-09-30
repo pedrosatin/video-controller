@@ -52,6 +52,10 @@ const {
   promoteToTopLayer,
   hideIndicatorEl,
   _getIndicator,
+  scheduleIndicatorUpdate,
+  _setMouse,
+  _getIndRaf,
+  _setIndRaf,
   updateLoopBtn,
   videoSummaries,
   scanVideos,
@@ -503,6 +507,26 @@ describe('_get helper error path', () => {
         delete HTMLMediaElement.prototype[propertyName]
       }
     }
+  })
+
+  it('should return undefined when the fallback direct property access also throws', () => {
+    const video = document.createElement('video')
+    const propertyName = 'mockPropertyErrorFallback'
+
+    // Define a getter on the object itself that throws,
+    // simulating a failure in the catch block: `return video[prop]`
+    Object.defineProperty(video, propertyName, {
+      get: function () {
+        throw new Error('Simulated fallback direct getter error')
+      },
+      configurable: true,
+    })
+
+    // Act
+    const result = _get(video, propertyName)
+
+    // Assert
+    expect(result).toBeUndefined()
   })
 })
 
@@ -1369,6 +1393,47 @@ describe('seek', () => {
     seek(15)
 
     expect(setTimeSpy).toHaveBeenCalledWith(105)
+  })
+})
+
+
+describe('scheduleIndicatorUpdate', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+    jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => setTimeout(cb, 16))
+    _setMouse(-1, -1)
+    _setIndRaf(null)
+
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+    jest.restoreAllMocks()
+  })
+
+  it('returns early if indRaf is set', () => {
+    _setIndRaf(123)
+    scheduleIndicatorUpdate()
+    expect(window.requestAnimationFrame).not.toHaveBeenCalled()
+  })
+
+  it('sets indRaf and schedules rAF', () => {
+    _setMouse(50, 50)
+
+    // We mock getBoundingClientRect on HTMLElement to prevent errors in updateIndicator
+    const rectMock = jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      top: 0, left: 0, bottom: 100, right: 100, width: 100, height: 100, x: 0, y: 0
+    });
+
+    scheduleIndicatorUpdate()
+    expect(_getIndRaf()).not.toBeNull()
+    expect(window.requestAnimationFrame).toHaveBeenCalledTimes(1)
+
+    // Simulate rAF execution
+    jest.advanceTimersByTime(16)
+    expect(_getIndRaf()).toBeNull()
+
+    rectMock.mockRestore();
   })
 })
 
