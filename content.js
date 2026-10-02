@@ -215,12 +215,15 @@
     /* Try the closest player container first, then the video itself */
     const container = activeVideo.closest('[class*="player" i]') || activeVideo.parentElement
     if (!document.fullscreenElement) {
-      ;(container || activeVideo).requestFullscreen().catch((err) => {
-        console.warn('[VideoController] container.requestFullscreen failed:', err)
-        activeVideo.requestFullscreen().catch((err2) => {
+      ;(container || activeVideo)
+        .requestFullscreen()
+        .catch((err) => {
+          console.warn('[VideoController] container.requestFullscreen failed:', err)
+          return activeVideo.requestFullscreen()
+        })
+        .catch((err2) => {
           console.warn('[VideoController] activeVideo.requestFullscreen failed:', err2)
         })
-      })
     } else {
       document
         .exitFullscreen()
