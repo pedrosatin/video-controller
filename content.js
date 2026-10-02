@@ -992,7 +992,7 @@
       for (const node of addedElements) {
         let hasAddedAncestor = false
         let p = node.parentNode
-        const path = []
+        let q = p
 
         while (p) {
           if (addedElements.has(p) || knownHas.has(p)) {
@@ -1002,18 +1002,17 @@
           if (knownNotHas.has(p)) {
             break
           }
-          path.push(p)
+          knownNotHas.add(p)
           p = p.parentNode
         }
 
         if (hasAddedAncestor) {
-          for (let i = 0, len = path.length; i < len; i++) {
-            knownHas.add(path[i])
+          while (q && q !== p) {
+            knownNotHas.delete(q)
+            knownHas.add(q)
+            q = q.parentNode
           }
         } else {
-          for (let i = 0, len = path.length; i < len; i++) {
-            knownNotHas.add(path[i])
-          }
           if (node.tagName === 'VIDEO') {
             registerVideo(node)
           } else {
