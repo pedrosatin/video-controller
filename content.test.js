@@ -829,6 +829,8 @@ describe('toggleFullscreen', () => {
     await Promise.resolve()
     await Promise.resolve()
     await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
 
     expect(container.requestFullscreen).toHaveBeenCalled()
     expect(video.requestFullscreen).toHaveBeenCalled()
