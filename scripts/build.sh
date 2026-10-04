@@ -10,6 +10,7 @@ mkdir -p dist/icons dist/scripts
 
 npx esbuild panelTemplate.js content.js popup.js --minify --outdir=dist
 npx esbuild scripts/utils.js --minify --outfile=dist/scripts/utils.js
+npx esbuild scripts/native-access.js --minify --outfile=dist/scripts/native-access.js
 npx esbuild content.css --minify --outfile=dist/content.css
 
 cp manifest.json popup.html dist/
