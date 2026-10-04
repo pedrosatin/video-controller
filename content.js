@@ -389,10 +389,14 @@
     if (dur > 0 && isFinite(dur) && !scrubbing) {
       progressBar.value = (cur / dur) * 1000
     }
-    const timeStr = `${window.formatDuration(cur, '–:––')} / ${window.formatDuration(dur, '–:––')}`
-    if (timeDisp._lastTimeStr !== timeStr) {
+    const curInt = cur | 0
+    const durInt = dur | 0
+    if (timeDisp._lastCur !== curInt || timeDisp._lastDur !== durInt) {
+      const timeStr = `${window.formatDuration(cur, '–:––')} / ${window.formatDuration(dur, '–:––')}`
       timeDisp.textContent = timeStr
       timeDisp._lastTimeStr = timeStr
+      timeDisp._lastCur = curInt
+      timeDisp._lastDur = durInt
     }
   })
 
