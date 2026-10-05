@@ -144,6 +144,14 @@ Fully automatic: every push to `main` builds the minified zip and publishes it t
 | Indicator doesn't appear | Video may be smaller than 48 px, or inside a cross-origin iframe the popup can still reach — use the popup instead |
 | Speed snaps back | The site fought more than 5 times in one second; set the speed again |
 
+## Contributing
+
+Found a bug or have an idea for an improvement? Please [open an issue](https://github.com/pedrosatin/video-controller/issues) describing it.
+
+## Author
+
+Criado por [@pedrosatin](https://github.com/pedrosatin)
+
 ## License
 
 MIT
